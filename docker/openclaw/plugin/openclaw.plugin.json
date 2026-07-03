@@ -1,0 +1,10 @@
+{
+  "id": "guardrail-enforcement",
+  "name": "Agent Guardrail Enforcement",
+  "version": "1.0.0",
+  "description": "Routes every OpenClaw tool call through the Agent Guardrail Engine's policy evaluation API before execution.",
+  "main": "index.ts",
+  "openclaw": {
+    "minVersion": "2026.2.0"
+  }
+}

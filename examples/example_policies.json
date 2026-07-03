@@ -1,0 +1,104 @@
+{
+  "policy": {
+    "name": "baseline-data-governance",
+    "description": "Baseline guardrails for data classification, filesystem access, API calls, and sharing"
+  },
+  "rules": [
+    {
+      "name": "deny-confidential-filesystem-production",
+      "description": "Agent is not allowed to access confidential filesystem resources in production",
+      "subject_type": "agent",
+      "subject_value": "agent_sales_001",
+      "action": "read",
+      "resource_type": "filesystem",
+      "resource_pattern": "/data/**",
+      "condition": { "classification": { "in": ["confidential", "pii", "secret"] }, "location": { "eq": "production" } },
+      "effect": "deny",
+      "priority": 900,
+      "enabled": true,
+      "alert_on_match": false
+    },
+    {
+      "name": "allow-public-internal-filesystem",
+      "description": "Allow reading public/internal classified files",
+      "subject_type": "agent",
+      "subject_value": "agent_sales_001",
+      "action": "read",
+      "resource_type": "filesystem",
+      "resource_pattern": "/data/**",
+      "condition": { "classification": { "in": ["public", "internal"] } },
+      "effect": "allow",
+      "priority": 500,
+      "enabled": true
+    },
+    {
+      "name": "deny-all-secret-classification",
+      "description": "No agent may access resources classified as 'secret', org-wide",
+      "subject_type": "agent",
+      "subject_value": "*",
+      "action": "read",
+      "resource_type": "filesystem",
+      "resource_pattern": "*",
+      "condition": { "classification": { "eq": "secret" } },
+      "effect": "deny",
+      "priority": 1000,
+      "enabled": true,
+      "alert_on_match": true
+    },
+    {
+      "name": "allow-crm-api",
+      "description": "Allow the sales agent to call the internal CRM API, rate-limited",
+      "subject_type": "agent",
+      "subject_value": "agent_sales_001",
+      "action": "call_api",
+      "resource_type": "api",
+      "resource_pattern": "POST /v1/crm/*",
+      "condition": {},
+      "effect": "allow",
+      "priority": 400,
+      "enabled": true,
+      "rate_limit_per_minute": 30
+    },
+    {
+      "name": "deny-share-pii-external",
+      "description": "Agents may not share PII-classified data to any non-internal destination",
+      "subject_type": "agent",
+      "subject_value": "*",
+      "action": "share",
+      "resource_type": "database",
+      "resource_pattern": "*",
+      "condition": { "classification": { "eq": "pii" }, "destination": { "ne": "internal" } },
+      "effect": "deny",
+      "priority": 950,
+      "enabled": true,
+      "alert_on_match": true
+    },
+    {
+      "name": "allow-known-saas-domains",
+      "description": "Allow outbound calls to approved SaaS domains only",
+      "subject_type": "agent",
+      "subject_value": "*",
+      "action": "access_url",
+      "resource_type": "url",
+      "resource_pattern": "*.salesforce.com",
+      "condition": {},
+      "effect": "allow",
+      "priority": 300,
+      "enabled": true
+    },
+    {
+      "name": "deny-team-growth-secrets",
+      "description": "Example team-scoped rule: no agent owned by the 'growth' team may read secrets, regardless of the assigned policy set",
+      "subject_type": "team",
+      "subject_value": "growth",
+      "action": "read",
+      "resource_type": "secret",
+      "resource_pattern": "*",
+      "condition": {},
+      "effect": "deny",
+      "priority": 990,
+      "enabled": true,
+      "alert_on_match": true
+    }
+  ]
+}
