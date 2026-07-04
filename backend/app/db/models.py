@@ -51,13 +51,22 @@ class SubjectType(str, enum.Enum):
 
 
 class ActionType(str, enum.Enum):
+    # Filesystem actions
     READ = "read"
     WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+    LIST = "list"
+    MOVE = "move"
+    RENAME = "rename"
+    APPEND = "append"
+    # General / cross-resource actions
     EXECUTE = "execute"
     SHARE = "share"
     CALL_API = "call_api"
     ACCESS_URL = "access_url"
-    DELETE = "delete"
+    # Tool / command invocation
+    INVOKE = "invoke"
 
 
 class ResourceType(str, enum.Enum):
@@ -67,6 +76,7 @@ class ResourceType(str, enum.Enum):
     DATABASE = "database"
     SECRET = "secret"
     TOOL = "tool"
+    COMMAND = "command"
 
 
 class DataClassification(str, enum.Enum):
@@ -246,7 +256,7 @@ class AccessDecision(SQLModel, table=True):
 
     id: str = Field(default_factory=gen_uuid, primary_key=True)
     agent_id: Optional[str] = Field(default=None, foreign_key="agents.id", index=True)
-    user_id: Optional[str] = Field(default=None, index=True)
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
 
     action_type: str = Field(index=True)
     resource_type: str = Field(index=True)
@@ -284,6 +294,28 @@ class ViolationSeverity(str, enum.Enum):
     CRITICAL = "critical"
 
 
+# ---------------------------------------------------------------------------
+# System Settings (runtime-overridable engine configuration)
+# ---------------------------------------------------------------------------
+
+class SystemSettings(SQLModel, table=True):
+    """
+    Key-value store for runtime-overridable engine settings.
+    Admins can change these via the /settings/engine API without restarting
+    the server. The enforcement engine reads these values, falling back to
+    environment config when a key is absent.
+
+    Supported keys:
+      default_effect      — "allow" | "deny" (overrides POLICY_DEFAULT_EFFECT)
+    """
+    __tablename__ = "system_settings"
+
+    key: str = Field(primary_key=True)
+    value: str
+    updated_by: Optional[str] = Field(default=None, foreign_key="users.id")
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class Violation(SQLModel, table=True):
     __tablename__ = "violations"
 
@@ -297,23 +329,3 @@ class Violation(SQLModel, table=True):
     acknowledged: bool = Field(default=False, index=True)
     acknowledged_by: Optional[str] = Field(default=None, foreign_key="users.id")
     created_at: datetime = Field(default_factory=utcnow, index=True)
-
-
-# ---------------------------------------------------------------------------
-# System Settings (runtime-overridable engine configuration)
-# ---------------------------------------------------------------------------
-
-class SystemSettings(SQLModel, table=True):
-    """
-    Key-value store for runtime-overridable engine settings.
-    Admins can change these via the /settings/engine API without restarting.
-
-    Supported keys:
-      default_effect  — "allow" | "deny" (overrides POLICY_DEFAULT_EFFECT)
-    """
-    __tablename__ = "system_settings"
-
-    key: str = Field(primary_key=True)
-    value: str
-    updated_by: Optional[str] = Field(default=None, foreign_key="users.id")
-    updated_at: datetime = Field(default_factory=utcnow)

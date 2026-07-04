@@ -173,6 +173,7 @@ async def evaluate(session: AsyncSession, request: EvaluationRequest) -> EngineR
             rate_limited = True
 
     if matched_rule is None:
+        # Read runtime-overridable default effect from DB; fall back to env config
         _db_setting = await session.get(SystemSettings, "default_effect")
         effective_default = _db_setting.value if _db_setting else settings.POLICY_DEFAULT_EFFECT
         decision = Effect(effective_default)

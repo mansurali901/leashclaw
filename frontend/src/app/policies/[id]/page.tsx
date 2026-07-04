@@ -8,8 +8,8 @@ import { EffectBadge } from "@/components/Badges";
 import { useAuth } from "@/lib/auth";
 import type { ActionType, Effect, PolicyRead, ResourceType, RuleRead, SubjectType } from "@/types";
 
-const ACTIONS: ActionType[] = ["read", "write", "execute", "share", "call_api", "access_url", "delete"];
-const RESOURCE_TYPES: ResourceType[] = ["filesystem", "api", "url", "database", "secret", "tool"];
+const ACTIONS: ActionType[] = ["read", "write", "create", "delete", "list", "move", "rename", "append", "execute", "share", "call_api", "access_url", "invoke"];
+const RESOURCE_TYPES: ResourceType[] = ["filesystem", "api", "url", "database", "secret", "tool", "command"];
 const SUBJECT_TYPES: SubjectType[] = ["agent", "role", "team", "user"];
 
 export default function PolicyDetailPage() {
@@ -60,7 +60,7 @@ export default function PolicyDetailPage() {
               {isAdmin && (
                 <button
                   onClick={() => setShowForm((s) => !s)}
-                  className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
+                  className="rounded-lg bg-signal-allow/15 border border-signal-allow/40 text-signal-allow text-sm px-4 py-2 hover:bg-signal-allow/25 transition-colors"
                 >
                   + Add rule
                 </button>
@@ -261,7 +261,7 @@ function RuleForm({ policyId, onCreated }: { policyId: string; onCreated: () => 
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 disabled:opacity-50"
+        className="rounded-lg bg-signal-allow/15 border border-signal-allow/40 text-signal-allow text-sm px-4 py-2 disabled:opacity-50"
       >
         {submitting ? "Creating…" : "Create rule"}
       </button>

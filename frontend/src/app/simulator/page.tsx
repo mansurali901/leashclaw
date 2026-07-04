@@ -67,7 +67,7 @@ export default function SimulatorPage() {
             <button
               onClick={onRun}
               disabled={submitting}
-              className="mt-3 w-full rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm py-2.5 hover:bg-ink-600 transition-colors disabled:opacity-50"
+              className="mt-3 w-full rounded-lg bg-signal-info/15 border border-signal-info/40 text-signal-info text-sm py-2.5 hover:bg-signal-info/25 transition-colors disabled:opacity-50"
             >
               {submitting ? "Evaluating…" : "Run evaluation"}
             </button>

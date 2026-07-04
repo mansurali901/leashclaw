@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
-import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -28,8 +27,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="flex justify-center mb-8">
-          <Logo variant="stacked" size="lg" />
+        <div className="flex items-center gap-2 justify-center mb-8">
+          <div className="h-8 w-8 rounded-md bg-signal-allow/15 border border-signal-allow/40 flex items-center justify-center text-signal-allow font-mono text-sm">
+            G
+          </div>
+          <span className="font-display text-2xl text-mist-100 tracking-tight">Guardrail</span>
         </div>
 
         <form onSubmit={onSubmit} className="panel p-6 space-y-4">
@@ -71,7 +73,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-ink-700 border border-ink-500 text-mist-100 font-medium text-sm py-2.5 hover:bg-ink-600 transition-colors disabled:opacity-50"
+            className="w-full rounded-lg bg-signal-allow/15 border border-signal-allow/40 text-signal-allow font-medium text-sm py-2.5 hover:bg-signal-allow/25 transition-colors disabled:opacity-50"
           >
             {submitting ? "Signing in…" : "Sign in"}
           </button>

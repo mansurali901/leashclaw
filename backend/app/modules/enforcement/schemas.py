@@ -8,8 +8,8 @@ from app.db.models import Effect
 class EvaluationRequest(BaseModel):
     agent_id: str = Field(description="Agent slug, e.g. agent_sales_001")
     user_id: Optional[str] = Field(default=None, description="Human user on whose behalf the agent acts, if any")
-    action: str = Field(description="read, write, execute, share, call_api, access_url, delete")
-    resource_type: str = Field(description="filesystem, api, url, database, secret, tool")
+    action: str = Field(description="read, write, create, delete, list, move, rename, append, execute, share, call_api, access_url, invoke")
+    resource_type: str = Field(description="filesystem, api, url, database, secret, tool, command")
     resource: str = Field(description="path/domain/API pattern/tool name being accessed")
     metadata: dict[str, Any] = Field(default_factory=dict, description="classification, location, and any other context")
 

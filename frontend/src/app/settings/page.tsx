@@ -85,6 +85,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
           {/* ── Left column: Account ── */}
           <div className="space-y-4">
+            {/* Avatar card */}
             <div className="panel p-5">
               <p className="text-xs font-mono text-mist-700 uppercase tracking-wide mb-4">Account</p>
 
@@ -109,14 +110,11 @@ export default function SettingsPage() {
 
               <div className="space-y-2 pt-4 border-t border-ink-700">
                 <InfoRow label="Team" value={user?.team ?? "—"} />
-                <InfoRow
-                  label="Status"
-                  value={user?.is_active ? "active" : "inactive"}
-                  valueColor={user?.is_active ? "text-signal-allow" : "text-signal-deny"}
-                />
+                <InfoRow label="Status" value={user?.is_active ? "active" : "inactive"} valueColor={user?.is_active ? "text-signal-allow" : "text-signal-deny"} />
               </div>
             </div>
 
+            {/* Permissions note */}
             <div className="rounded-lg border border-ink-600 bg-ink-900 px-4 py-3">
               <p className="text-xs font-mono text-mist-700 uppercase tracking-wide mb-1.5">Permissions</p>
               {isAdmin ? (
@@ -131,7 +129,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* ── Right column ── */}
+          {/* ── Right column: Engine settings ── */}
           <div className="space-y-4">
             {/* Engine status bar */}
             <div className="panel px-5 py-4 flex items-center justify-between gap-4">
@@ -220,13 +218,14 @@ export default function SettingsPage() {
                     })}
                   </div>
 
+                  {/* Security warning when allow is selected */}
                   {defaultEffect === "allow" && (
                     <div className="mt-3 flex gap-2.5 rounded-lg border border-signal-warn/30 bg-signal-warn/8 px-3.5 py-3">
                       <span className="text-signal-warn font-mono text-sm shrink-0">▲</span>
                       <p className="text-xs text-signal-warn/80">
                         <span className="font-medium text-signal-warn">Security risk.</span>{" "}
-                        Setting the default to <span className="font-mono">allow</span> means unmatched agent
-                        actions will pass through without explicit approval. Ensure comprehensive deny rules are in place.
+                        Setting the default to <span className="font-mono">allow</span> means unmatched agent actions
+                        will pass through without explicit approval. Ensure comprehensive deny rules are in place.
                       </p>
                     </div>
                   )}
@@ -252,12 +251,6 @@ export default function SettingsPage() {
                       )}
                     </div>
                   )}
-
-                  {!isAdmin && (
-                    <p className="text-xs text-mist-700 font-mono mt-4 pt-4 border-t border-ink-700">
-                      You need admin or super_admin role to modify engine settings.
-                    </p>
-                  )}
                 </>
               )}
             </div>
@@ -275,16 +268,20 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <EnvRow label="Engine backend" value={settings?.policy_engine_backend ?? "—"} chip />
+                  <EnvRow
+                    label="Engine backend"
+                    value={settings?.policy_engine_backend ?? "—"}
+                    chip
+                  />
                   <EnvRow
                     label="Default rate limit"
                     value={`${settings?.default_rate_limit_per_minute ?? "—"} req / min`}
                   />
-                  <EnvRow
-                    label="OPA endpoint"
-                    value={settings?.opa_url ?? "not configured"}
-                    muted={!settings?.opa_url}
-                  />
+                  {settings?.opa_url ? (
+                    <EnvRow label="OPA endpoint" value={settings.opa_url} />
+                  ) : (
+                    <EnvRow label="OPA endpoint" value="not configured" muted />
+                  )}
                 </div>
               )}
             </div>
@@ -295,7 +292,15 @@ export default function SettingsPage() {
   );
 }
 
-function InfoRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+function InfoRow({
+  label,
+  value,
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs font-mono text-mist-700">{label}</span>
@@ -304,7 +309,17 @@ function InfoRow({ label, value, valueColor }: { label: string; value: string; v
   );
 }
 
-function EnvRow({ label, value, chip, muted }: { label: string; value: string; chip?: boolean; muted?: boolean }) {
+function EnvRow({
+  label,
+  value,
+  chip,
+  muted,
+}: {
+  label: string;
+  value: string;
+  chip?: boolean;
+  muted?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-xs font-mono text-mist-700 shrink-0">{label}</span>

@@ -72,24 +72,5 @@ services:
     ports:
       - "3000:3000"
 
-  openclaw:
-    build:
-      context: ./docker/openclaw
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      GUARDRAIL_URL: http://backend:8000/api/v1
-      GUARDRAIL_AGENT_SLUG: ${GUARDRAIL_AGENT_SLUG:-openclaw-agent}
-      GUARDRAIL_AGENT_API_KEY: ${GUARDRAIL_AGENT_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-guardrail-local-token}
-    depends_on:
-      backend:
-        condition: service_started
-    ports:
-      - "19000:19000"
-    profiles: ["openclaw"]
-
 volumes:
   guardrail_db_data:
