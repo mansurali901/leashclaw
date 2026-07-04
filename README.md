@@ -1,6 +1,7 @@
 <div align="center">
 
-# Agent Guardrail Engine
+# Leashclaw
+### An Agent Guardrail Engine
 
 **Production-grade security and governance for AI agents.**
 Every agent action — file reads, API calls, tool invocations, URL fetches, secret access — is evaluated against your policies *before* it executes, logged immutably, and surfaced on a live dashboard.
