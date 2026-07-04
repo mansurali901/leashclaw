@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: #080a10;
+  color: #c7ccdb;
+}
+
+body {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-attachment: fixed;
+}
+
+::selection {
+  background-color: #3ddc9733;
+  color: #f4f6fb;
+}
+
+* {
+  scrollbar-color: #343b4e #12151e;
+  scrollbar-width: thin;
+}
+
+:focus-visible {
+  outline: 2px solid #5da9ff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.panel {
+  background-color: #12151ecc;
+  border: 1px solid #242a3a;
+  border-radius: 10px;
+}
+
+.pulse-tick {
+  animation: pulse-in 320ms ease-out both;
+}
+
+@keyframes pulse-in {
+  from {
+    transform: scaleY(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}

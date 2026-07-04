@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/pure-dev-mansoorulhasan/Downloads/agent-guardrail/**)",
+      "Bash(docker compose:*)"
+    ]
+  }
+}
