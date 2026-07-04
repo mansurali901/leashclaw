@@ -54,7 +54,7 @@ export default function PoliciesPage() {
           {isAdmin && (
             <button
               onClick={() => setShowCreate((s) => !s)}
-              className="rounded-lg bg-signal-allow/15 border border-signal-allow/40 text-signal-allow text-sm px-4 py-2 hover:bg-signal-allow/25 transition-colors"
+              className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
             >
               + New policy
             </button>
@@ -81,7 +81,7 @@ export default function PoliciesPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-signal-allow/15 border border-signal-allow/40 text-signal-allow text-sm px-4 py-2 disabled:opacity-50"
+              className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 disabled:opacity-50"
             >
               {submitting ? "Creating…" : "Create policy"}
             </button>

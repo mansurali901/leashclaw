@@ -207,9 +207,17 @@ async def persist_decision(
     agent_result = await session.exec(select(Agent).where(Agent.slug == request.agent_id))
     agent = agent_result.first()
 
+    # Validate user_id FK — the request may carry an arbitrary string (e.g. from
+    # the simulator form). Only persist it if the user actually exists.
+    resolved_user_id: Optional[str] = None
+    if request.user_id:
+        user_obj = await session.get(User, request.user_id)
+        if user_obj:
+            resolved_user_id = user_obj.id
+
     access_decision = AccessDecision(
         agent_id=agent.id if agent else None,
-        user_id=request.user_id,
+        user_id=resolved_user_id,
         action_type=request.action,
         resource_type=request.resource_type,
         resource_identifier=request.resource,

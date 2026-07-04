@@ -2,31 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Dark theme (default) ── */
 :root {
   color-scheme: dark;
+
+  --ink-950: 8 10 16;
+  --ink-900: 13 16 23;
+  --ink-800: 18 21 30;
+  --ink-700: 26 30 42;
+  --ink-600: 36 42 58;
+  --ink-500: 52 59 78;
+
+  --mist-100: 244 246 251;
+  --mist-300: 199 204 219;
+  --mist-500: 138 145 168;
+  --mist-700: 86 94 117;
+
+  --grid-line: rgba(255, 255, 255, 0.035);
+}
+
+/* ── Light theme ── */
+html.light {
+  color-scheme: light;
+
+  --ink-950: 255 255 255;
+  --ink-900: 244 246 251;
+  --ink-800: 232 236 245;
+  --ink-700: 213 220 240;
+  --ink-600: 192 202 224;
+  --ink-500: 138 145 168;
+
+  --mist-100: 8 10 16;
+  --mist-300: 26 30 42;
+  --mist-500: 52 59 78;
+  --mist-700: 86 94 117;
+
+  --grid-line: rgba(0, 0, 0, 0.05);
 }
 
 html,
 body {
-  background-color: #080a10;
-  color: #c7ccdb;
+  background-color: rgb(var(--ink-950));
+  color: rgb(var(--mist-300));
 }
 
 body {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 28px 28px;
   background-attachment: fixed;
 }
 
 ::selection {
   background-color: #3ddc9733;
-  color: #f4f6fb;
+  color: rgb(var(--mist-100));
 }
 
 * {
-  scrollbar-color: #343b4e #12151e;
+  scrollbar-color: rgb(var(--ink-600)) rgb(var(--ink-800));
   scrollbar-width: thin;
 }
 
@@ -46,9 +80,13 @@ body {
 }
 
 .panel {
-  background-color: #12151ecc;
-  border: 1px solid #242a3a;
+  background-color: rgb(var(--ink-800) / 0.8);
+  border: 1px solid rgb(var(--ink-600));
   border-radius: 10px;
+}
+
+html.light .panel {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .pulse-tick {

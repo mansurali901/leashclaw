@@ -6,5 +6,23 @@
   "main": "index.ts",
   "openclaw": {
     "minVersion": "2026.2.0"
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "guardrailUrl": {
+        "type": "string",
+        "description": "Base URL of the Guardrail Engine API"
+      },
+      "agentSlug": {
+        "type": "string",
+        "description": "Agent slug registered in the Guardrail Engine"
+      },
+      "failOpenOnNetworkError": {
+        "type": "boolean",
+        "description": "Allow tool calls when the Guardrail Engine is unreachable (default: false)"
+      }
+    },
+    "required": ["guardrailUrl", "agentSlug"]
   }
 }

@@ -64,7 +64,7 @@ export default function AgentsPage() {
           {isAdmin && (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-lg bg-signal-allow/15 border border-signal-allow/40 text-signal-allow text-sm px-4 py-2 hover:bg-signal-allow/25 transition-colors"
+              className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
             >
               + Register agent
             </button>
@@ -309,7 +309,7 @@ function CreateAgentModal({
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 rounded-lg bg-signal-allow/15 border border-signal-allow/40 text-signal-allow text-sm py-2.5 disabled:opacity-50"
+                className="flex-1 rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm py-2.5 disabled:opacity-50"
               >
                 {submitting ? "Creating…" : "Create"}
               </button>
