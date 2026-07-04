@@ -1,12 +1,11 @@
 import { SVGProps } from "react";
 
 /**
- * Guardrail pulse mark — 6 decision-pulse bars mirroring the dashboard's
- * DecisionPulse component. Allow bars (emerald, shorter) alternate with
- * deny bars (coral, taller), reading as a security fence / guardrail at
- * a distance and as the live enforcement pulse up close.
+ * LeashClaw mark — 3 diagonal claw-scratch strokes in signal colours.
+ * Left + right in coral (deny), centre in emerald (allow).
+ * Slight inward curve on each stroke so they read as claw marks at any size.
  */
-export function PulseMark({ className, ...props }: SVGProps<SVGSVGElement>) {
+export function ClawMark({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg
       viewBox="0 0 48 48"
@@ -16,28 +15,35 @@ export function PulseMark({ className, ...props }: SVGProps<SVGSVGElement>) {
       className={className}
       {...props}
     >
-      {/* Bar 1 · allow · h=14 */}
-      <rect x="1.5"  y="32" width="5" height="14" rx="2" fill="#3DDC97" fillOpacity="0.85" />
-      {/* Bar 2 · deny  · h=36 */}
-      <rect x="9.5"  y="10" width="5" height="36" rx="2" fill="#FF5C6C" fillOpacity="0.9"  />
-      {/* Bar 3 · allow · h=18 */}
-      <rect x="17.5" y="28" width="5" height="18" rx="2" fill="#3DDC97" fillOpacity="0.85" />
-      {/* Bar 4 · deny  · h=42 */}
-      <rect x="25.5" y="4"  width="5" height="42" rx="2" fill="#FF5C6C" fillOpacity="0.9"  />
-      {/* Bar 5 · allow · h=10 */}
-      <rect x="33.5" y="36" width="5" height="10" rx="2" fill="#3DDC97" fillOpacity="0.85" />
-      {/* Bar 6 · deny  · h=28 */}
-      <rect x="41.5" y="18" width="5" height="28" rx="2" fill="#FF5C6C" fillOpacity="0.9"  />
+      {/* Left claw — coral */}
+      <path
+        d="M 7 4 C 9 16 11 30 13 44"
+        stroke="#FF5C6C"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeOpacity="0.9"
+      />
+      {/* Centre claw — emerald */}
+      <path
+        d="M 20 4 C 22 16 24 30 26 44"
+        stroke="#3DDC97"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeOpacity="0.85"
+      />
+      {/* Right claw — coral */}
+      <path
+        d="M 33 4 C 35 16 37 30 39 44"
+        stroke="#FF5C6C"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeOpacity="0.9"
+      />
     </svg>
   );
 }
 
 interface LogoProps {
-  /**
-   * "mark"       — icon only, no wordmark (use for favicons, tight spaces)
-   * "horizontal" — icon left, wordmark right (default, sidebar / nav)
-   * "stacked"    — icon centered above wordmark (login / marketing)
-   */
   variant?: "mark" | "horizontal" | "stacked";
   size?: "xs" | "sm" | "md" | "lg";
   className?: string;
@@ -66,16 +72,16 @@ const subSize = {
 
 export default function Logo({ variant = "horizontal", size = "md", className = "" }: LogoProps) {
   if (variant === "mark") {
-    return <PulseMark className={`${markSize[size]} ${className}`} />;
+    return <ClawMark className={`${markSize[size]} ${className}`} />;
   }
 
   if (variant === "stacked") {
     return (
       <div className={`flex flex-col items-center gap-3 ${className}`}>
-        <PulseMark className={markSize[lg_or_md(size)]} />
+        <ClawMark className={markSize[size === "lg" ? "lg" : "md"]} />
         <div className="text-center">
           <p className={`font-display font-medium text-mist-100 tracking-tight leading-none ${wordSize[size]}`}>
-            Guardrail
+            LeashClaw
           </p>
           <p className={`font-mono text-mist-700 mt-1 tracking-widest uppercase ${subSize[size]}`}>
             agent governance console
@@ -85,17 +91,12 @@ export default function Logo({ variant = "horizontal", size = "md", className = 
     );
   }
 
-  // horizontal (default)
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      <PulseMark className={markSize[size]} />
+      <ClawMark className={markSize[size]} />
       <span className={`font-display font-medium text-mist-100 tracking-tight leading-none ${wordSize[size]}`}>
-        Guardrail
+        LeashClaw
       </span>
     </div>
   );
-}
-
-function lg_or_md(size: LogoProps["size"]) {
-  return size === "lg" ? "lg" : "md";
 }

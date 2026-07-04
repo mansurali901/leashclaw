@@ -47,6 +47,7 @@ from app.db.models import (
     Effect,
     Policy,
     Rule,
+    SystemSettings,
     User,
     Violation,
     ViolationSeverity,
@@ -172,10 +173,12 @@ async def evaluate(session: AsyncSession, request: EvaluationRequest) -> EngineR
             rate_limited = True
 
     if matched_rule is None:
-        decision = Effect(settings.POLICY_DEFAULT_EFFECT)
+        _db_setting = await session.get(SystemSettings, "default_effect")
+        effective_default = _db_setting.value if _db_setting else settings.POLICY_DEFAULT_EFFECT
+        decision = Effect(effective_default)
         reason = (
             f"No matching rule for action='{request.action}' resource_type='{request.resource_type}' "
-            f"resource='{request.resource}' — default policy is {settings.POLICY_DEFAULT_EFFECT}"
+            f"resource='{request.resource}' — default policy is {effective_default}"
         )
         matched_rule_id = None
     elif rate_limited:

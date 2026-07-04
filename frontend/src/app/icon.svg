@@ -1,20 +1,6 @@
 <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!--
-    Guardrail icon mark — 6 decision-pulse bars, bottom-aligned.
-    Alternates allow (emerald, shorter) / deny (coral, taller),
-    mirroring the dashboard DecisionPulse height ratios.
-    Bar width 5 · gap 3 · baseline y=46 · viewBox 48×48
-  -->
-  <!-- Bar 1 · allow · h=14 -->
-  <rect x="1.5" y="32" width="5" height="14" rx="2" fill="#3DDC97" fill-opacity="0.85"/>
-  <!-- Bar 2 · deny  · h=36 -->
-  <rect x="9.5" y="10" width="5" height="36" rx="2" fill="#FF5C6C" fill-opacity="0.9"/>
-  <!-- Bar 3 · allow · h=18 -->
-  <rect x="17.5" y="28" width="5" height="18" rx="2" fill="#3DDC97" fill-opacity="0.85"/>
-  <!-- Bar 4 · deny  · h=42 -->
-  <rect x="25.5" y="4"  width="5" height="42" rx="2" fill="#FF5C6C" fill-opacity="0.9"/>
-  <!-- Bar 5 · allow · h=10 -->
-  <rect x="33.5" y="36" width="5" height="10" rx="2" fill="#3DDC97" fill-opacity="0.85"/>
-  <!-- Bar 6 · deny  · h=28 -->
-  <rect x="41.5" y="18" width="5" height="28" rx="2" fill="#FF5C6C" fill-opacity="0.9"/>
+  <!-- LeashClaw mark — 3 diagonal claw strokes, left+right coral, centre emerald -->
+  <path d="M 7 4 C 9 16 11 30 13 44" stroke="#FF5C6C" stroke-width="5.5" stroke-linecap="round" stroke-opacity="0.9"/>
+  <path d="M 20 4 C 22 16 24 30 26 44" stroke="#3DDC97" stroke-width="5.5" stroke-linecap="round" stroke-opacity="0.85"/>
+  <path d="M 33 4 C 35 16 37 30 39 44" stroke="#FF5C6C" stroke-width="5.5" stroke-linecap="round" stroke-opacity="0.9"/>
 </svg>

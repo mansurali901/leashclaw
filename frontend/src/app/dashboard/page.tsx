@@ -100,7 +100,7 @@ export default function DashboardPage() {
       <div className="p-8 max-w-[1400px]">
         <header className="mb-6">
           <h1 className="font-display text-2xl text-mist-100">Overview</h1>
-          <p className="text-sm text-mist-500 mt-1">Real-time posture of every agent evaluated by the guardrail engine.</p>
+          <p className="text-sm text-mist-500 mt-1">Real-time posture of every agent evaluated by the LeashClaw engine.</p>
         </header>
 
         {loading || !summary ? (

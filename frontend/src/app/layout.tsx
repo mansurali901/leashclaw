@@ -9,7 +9,7 @@ const body = Inter({ subsets: ["latin"], variable: "--font-body", weight: ["400"
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "Guardrail — Agent Governance Console",
+  title: "LeashClaw — Agent Governance Console",
   description: "Security and governance platform for AI agents.",
 };
 

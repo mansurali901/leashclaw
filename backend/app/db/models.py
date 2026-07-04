@@ -297,3 +297,23 @@ class Violation(SQLModel, table=True):
     acknowledged: bool = Field(default=False, index=True)
     acknowledged_by: Optional[str] = Field(default=None, foreign_key="users.id")
     created_at: datetime = Field(default_factory=utcnow, index=True)
+
+
+# ---------------------------------------------------------------------------
+# System Settings (runtime-overridable engine configuration)
+# ---------------------------------------------------------------------------
+
+class SystemSettings(SQLModel, table=True):
+    """
+    Key-value store for runtime-overridable engine settings.
+    Admins can change these via the /settings/engine API without restarting.
+
+    Supported keys:
+      default_effect  — "allow" | "deny" (overrides POLICY_DEFAULT_EFFECT)
+    """
+    __tablename__ = "system_settings"
+
+    key: str = Field(primary_key=True)
+    value: str
+    updated_by: Optional[str] = Field(default=None, foreign_key="users.id")
+    updated_at: datetime = Field(default_factory=utcnow)

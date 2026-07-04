@@ -159,6 +159,13 @@ export interface AuditLogRead {
   created_at: string;
 }
 
+export interface EngineSettingsRead {
+  default_effect: "allow" | "deny";
+  policy_engine_backend: string;
+  default_rate_limit_per_minute: number;
+  opa_url: string | null;
+}
+
 export interface EvaluationRequest {
   agent_id: string;
   user_id?: string;
