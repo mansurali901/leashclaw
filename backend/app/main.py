@@ -27,6 +27,7 @@ from app.modules.policies.router import router as policies_router
 from app.modules.resources.router import router as resources_router
 from app.modules.rules.router import router as rules_router
 from app.modules.sandbox.router import router as sandbox_router
+from app.modules.settings.router import router as settings_router
 
 settings = get_settings()
 
@@ -55,7 +56,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -98,3 +99,4 @@ app.include_router(sandbox_router, prefix=api_prefix)
 app.include_router(enforcement_router, prefix=api_prefix)
 app.include_router(audit_router, prefix=api_prefix)
 app.include_router(dashboard_router, prefix=api_prefix)
+app.include_router(settings_router, prefix=api_prefix)

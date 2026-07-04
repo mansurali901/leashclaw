@@ -20,10 +20,10 @@ const config: Config = {
           700: "rgb(var(--mist-700) / <alpha-value>)",
         },
         signal: {
-          allow: "rgb(var(--signal-allow) / <alpha-value>)",
-          deny: "rgb(var(--signal-deny) / <alpha-value>)",
-          warn: "rgb(var(--signal-warn) / <alpha-value>)",
-          info: "rgb(var(--signal-info) / <alpha-value>)",
+          allow: "#3DDC97",
+          deny: "#FF5C6C",
+          warn: "#F5B942",
+          info: "#5DA9FF",
         },
       },
       fontFamily: {
@@ -33,12 +33,6 @@ const config: Config = {
       },
       boxShadow: {
         panel: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 12px 30px -14px rgba(0,0,0,0.6)",
-      },
-      backgroundImage: {
-        grid: "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
-      },
-      backgroundSize: {
-        grid: "28px 28px",
       },
     },
   },

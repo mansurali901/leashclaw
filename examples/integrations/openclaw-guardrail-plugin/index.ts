@@ -11,7 +11,7 @@
  *   cp -r openclaw-guardrail-plugin ~/.openclaw/extensions/guardrail-enforcement
  *   openclaw plugins install ~/.openclaw/extensions/guardrail-enforcement
  *
- * Configure (~/.openclaw/openclaw.json):
+ * Configure (~/.openclaw/openclaw.json — under plugins.entries.guardrail-enforcement.config):
  *   {
  *     "plugins": {
  *       "enabled": true,
@@ -21,16 +21,20 @@
  *           "enabled": true,
  *           "config": {
  *             "guardrailUrl": "http://localhost:8000/api/v1",
- *             "agentSlug": "agent_hermes_support_001",
+ *             "agentSlug": "openclaw",
+ *             "agentApiKey": "agk_...",
  *             "failOpenOnNetworkError": false
- *           },
- *           "env": {
- *             "GUARDRAIL_AGENT_API_KEY": "agk_..."
  *           }
  *         }
  *       }
  *     }
  *   }
+ *
+ * Config notes (OpenClaw 2026.x):
+ *   - Plugin-specific config is injected via api.pluginConfig (not api.config).
+ *   - api.config is the full openclaw.json root.
+ *   - api.on() maps to registerTypedHook — the correct API for before_tool_call.
+ *   - The default export must be a callable function (hook loader requirement).
  *
  * NOTE ON HOOK PAYLOAD SHAPE: `before_tool_call` event fields (toolName,
  * toolCallId, params, sessionKey, agentId) have evolved across OpenClaw
@@ -47,6 +51,7 @@ type AnyEvent = Record<string, any>;
 interface GuardrailConfig {
   guardrailUrl: string;
   agentSlug: string;
+  agentApiKey: string;
   failOpenOnNetworkError: boolean;
 }
 
@@ -95,89 +100,90 @@ function classify(toolName: string, params: AnyEvent) {
   if (mapping) {
     return { action: mapping.action, resourceType: mapping.resourceType, resource: mapping.resourceOf(params) };
   }
-  // Unmapped tools default to a generic "execute a tool" classification.
-  // The Guardrail Engine fails closed (deny) on anything with no matching
-  // rule, so unmapped/unknown tools are blocked by default unless an
-  // admin adds an explicit allow rule for resource_type=tool, pattern=<name>.
+  // Unmapped tools fall back to a generic classification. The Guardrail Engine
+  // applies the default policy (deny unless an explicit allow rule matches).
   return { action: "execute", resourceType: "tool", resource: toolName };
 }
 
-export default function definePluginEntry(entry: { id: string; name: string; register: (api: AnyEvent) => void }) {
-  return entry;
+// The default export must be a callable function so the hook loader accepts it.
+// api.pluginConfig holds plugin-specific config from plugins.entries.<id>.config.
+// api.on() is the correct registration method — it maps to registerTypedHook
+// which adds the handler to registry.typedHooks (read by the hook runner).
+function setup(api: AnyEvent) {
+  const pc: AnyEvent = api.pluginConfig ?? {};
+  const cfg: GuardrailConfig = {
+    guardrailUrl: pc.guardrailUrl ?? "http://localhost:8000/api/v1",
+    agentSlug: pc.agentSlug ?? process.env["GUARDRAIL_AGENT_SLUG"] ?? "unknown_agent",
+    agentApiKey: pc.agentApiKey ?? process.env["GUARDRAIL_AGENT_API_KEY"] ?? "",
+    failOpenOnNetworkError: pc.failOpenOnNetworkError ?? false,
+  };
+
+  if (!cfg.agentApiKey) {
+    console.warn("[guardrail-enforcement] agentApiKey is not set — evaluation calls will be rejected (401).");
+  }
+
+  api.on(
+    "before_tool_call",
+    async (event: AnyEvent) => {
+      // console.log("[guardrail-enforcement] raw event:", JSON.stringify(event));
+
+      const toolName: string = event.toolName ?? event.tool ?? "unknown";
+      const params: AnyEvent = event.params ?? event.arguments ?? {};
+      const { action, resourceType, resource } = classify(toolName, params);
+
+      const body = {
+        agent_id: cfg.agentSlug,
+        user_id: event.sessionKey ?? event.userId ?? undefined,
+        action,
+        resource_type: resourceType,
+        resource,
+        metadata: {
+          tool_name: toolName,
+          openclaw_session: event.sessionKey ?? null,
+        },
+      };
+
+      try {
+        const res = await fetch(`${cfg.guardrailUrl}/enforcement/evaluate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(cfg.agentApiKey ? { "X-Agent-Api-Key": cfg.agentApiKey } : {}),
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(3000),
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          console.error(`[guardrail-enforcement] evaluation failed (${res.status}): ${text}`);
+          if (cfg.failOpenOnNetworkError) return {};
+          return { block: true, blockReason: `Guardrail Engine unreachable (${res.status}) — failing closed` };
+        }
+
+        const decision = await res.json();
+
+        if (decision.decision === "deny") {
+          return {
+            block: true,
+            blockReason: decision.reason ?? `Blocked by guardrail policy (rule: ${decision.matched_rule_id ?? "default-deny"})`,
+          };
+        }
+
+        return {};
+      } catch (err) {
+        console.error("[guardrail-enforcement] evaluation threw:", err);
+        if (cfg.failOpenOnNetworkError) return {};
+        return { block: true, blockReason: "Guardrail Engine unreachable — failing closed" };
+      }
+    },
+    { priority: 100 },
+  );
 }
 
-module.exports = definePluginEntry({
-  id: "guardrail-enforcement",
-  name: "Agent Guardrail Enforcement",
-  register(api: AnyEvent) {
-    const cfg: GuardrailConfig = {
-      guardrailUrl: api.config?.guardrailUrl ?? "http://localhost:8000/api/v1",
-      agentSlug: api.config?.agentSlug ?? process.env.GUARDRAIL_AGENT_SLUG ?? "unknown_agent",
-      failOpenOnNetworkError: api.config?.failOpenOnNetworkError ?? false,
-    };
-    const apiKey = process.env.GUARDRAIL_AGENT_API_KEY;
-    if (!apiKey) {
-      console.warn("[guardrail-enforcement] GUARDRAIL_AGENT_API_KEY is not set — every evaluation call will be rejected by the Guardrail Engine (401).");
-    }
+// .name is read-only on named functions; OpenClaw reads display name from openclaw.plugin.json.
+setup.id = "guardrail-enforcement";
+// Plugin loader calls .register(api); alias it to the same setup function.
+setup.register = setup;
 
-    api.on(
-      "before_tool_call",
-      async (event: AnyEvent) => {
-        // console.log("[guardrail-enforcement] raw event:", JSON.stringify(event));
-
-        const toolName: string = event.toolName ?? event.tool ?? "unknown";
-        const params: AnyEvent = event.params ?? event.arguments ?? {};
-        const { action, resourceType, resource } = classify(toolName, params);
-
-        const body = {
-          agent_id: cfg.agentSlug,
-          user_id: event.sessionKey ?? event.userId ?? undefined,
-          action,
-          resource_type: resourceType,
-          resource,
-          metadata: {
-            tool_name: toolName,
-            openclaw_session: event.sessionKey ?? null,
-          },
-        };
-
-        try {
-          const res = await fetch(`${cfg.guardrailUrl}/enforcement/evaluate`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(apiKey ? { "X-Agent-Api-Key": apiKey } : {}),
-            },
-            body: JSON.stringify(body),
-            // Keep this tight — the guardrail call sits on the critical
-            // path of every tool invocation.
-            signal: AbortSignal.timeout(3000),
-          });
-
-          if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            console.error(`[guardrail-enforcement] evaluation call failed (${res.status}): ${text}`);
-            if (cfg.failOpenOnNetworkError) return {};
-            return { block: true, blockReason: `Guardrail Engine unreachable (${res.status}) — failing closed` };
-          }
-
-          const decision = await res.json();
-
-          if (decision.decision === "deny") {
-            return {
-              block: true,
-              blockReason: decision.reason ?? `Blocked by guardrail policy (rule: ${decision.matched_rule_id ?? "default-deny"})`,
-            };
-          }
-
-          return {}; // allow — no params rewrite
-        } catch (err) {
-          console.error("[guardrail-enforcement] evaluation call threw:", err);
-          if (cfg.failOpenOnNetworkError) return {};
-          return { block: true, blockReason: "Guardrail Engine unreachable — failing closed" };
-        }
-      },
-      { priority: 100 },
-    );
-  },
-});
+export default setup;

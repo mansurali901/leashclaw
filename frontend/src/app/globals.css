@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Dark theme (default) ───────────────────────────────────────────────── */
+/* ── Dark theme (default) ── */
 :root {
   color-scheme: dark;
 
@@ -18,47 +18,32 @@
   --mist-500: 138 145 168;
   --mist-700: 86 94 117;
 
-  --signal-allow: 61 220 151;
-  --signal-deny: 255 92 108;
-  --signal-warn: 245 185 66;
-  --signal-info: 93 169 255;
-
   --grid-line: rgba(255, 255, 255, 0.035);
-  --panel-bg: rgba(18, 21, 30, 0.8);
-  --panel-border: rgb(36, 42, 58);
-  --scrollbar-thumb: rgb(52, 59, 78);
-  --scrollbar-track: rgb(18, 21, 30);
 }
 
-/* ── Light theme ─────────────────────────────────────────────────────────── */
-.light {
+/* ── Light theme ── */
+html.light {
   color-scheme: light;
 
   --ink-950: 255 255 255;
-  --ink-900: 245 247 252;
-  --ink-800: 237 240 247;
-  --ink-700: 226 230 240;
-  --ink-600: 203 209 224;
-  --ink-500: 176 184 204;
+  --ink-900: 244 246 251;
+  --ink-800: 232 236 245;
+  --ink-700: 213 220 240;
+  --ink-600: 192 202 224;
+  --ink-500: 138 145 168;
 
-  --mist-100: 13 16 23;
-  --mist-300: 36 42 58;
-  --mist-500: 86 94 117;
-  --mist-700: 138 145 168;
+  --mist-100: 8 10 16;
+  --mist-300: 26 30 42;
+  --mist-500: 52 59 78;
+  --mist-700: 86 94 117;
 
-  --grid-line: rgba(0, 0, 0, 0.045);
-  --panel-bg: rgba(237, 240, 247, 0.8);
-  --panel-border: rgb(203, 209, 224);
-  --scrollbar-thumb: rgb(176, 184, 204);
-  --scrollbar-track: rgb(237, 240, 247);
+  --grid-line: rgba(0, 0, 0, 0.05);
 }
 
-/* ── Base ────────────────────────────────────────────────────────────────── */
 html,
 body {
   background-color: rgb(var(--ink-950));
   color: rgb(var(--mist-300));
-  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 body {
@@ -70,17 +55,17 @@ body {
 }
 
 ::selection {
-  background-color: rgb(var(--signal-allow) / 0.2);
+  background-color: #3ddc9733;
   color: rgb(var(--mist-100));
 }
 
 * {
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-color: rgb(var(--ink-600)) rgb(var(--ink-800));
   scrollbar-width: thin;
 }
 
 :focus-visible {
-  outline: 2px solid rgb(var(--signal-info));
+  outline: 2px solid #5da9ff;
   outline-offset: 2px;
 }
 
@@ -94,12 +79,14 @@ body {
   }
 }
 
-/* ── Components ──────────────────────────────────────────────────────────── */
 .panel {
-  background-color: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background-color: rgb(var(--ink-800) / 0.8);
+  border: 1px solid rgb(var(--ink-600));
   border-radius: 10px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+html.light .panel {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .pulse-tick {

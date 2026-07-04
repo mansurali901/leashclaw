@@ -29,7 +29,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <Logo variant="stacked" size="lg" />
+          <Logo variant="stacked" size="md" />
         </div>
 
         <form onSubmit={onSubmit} className="panel p-6 space-y-4">

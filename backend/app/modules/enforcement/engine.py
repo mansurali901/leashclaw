@@ -47,6 +47,7 @@ from app.db.models import (
     Effect,
     Policy,
     Rule,
+    SystemSettings,
     User,
     Violation,
     ViolationSeverity,
@@ -172,10 +173,13 @@ async def evaluate(session: AsyncSession, request: EvaluationRequest) -> EngineR
             rate_limited = True
 
     if matched_rule is None:
-        decision = Effect(settings.POLICY_DEFAULT_EFFECT)
+        # Read runtime-overridable default effect from DB; fall back to env config
+        _db_setting = await session.get(SystemSettings, "default_effect")
+        effective_default = _db_setting.value if _db_setting else settings.POLICY_DEFAULT_EFFECT
+        decision = Effect(effective_default)
         reason = (
             f"No matching rule for action='{request.action}' resource_type='{request.resource_type}' "
-            f"resource='{request.resource}' — default policy is {settings.POLICY_DEFAULT_EFFECT}"
+            f"resource='{request.resource}' — default policy is {effective_default}"
         )
         matched_rule_id = None
     elif rate_limited:
@@ -203,9 +207,17 @@ async def persist_decision(
     agent_result = await session.exec(select(Agent).where(Agent.slug == request.agent_id))
     agent = agent_result.first()
 
+    # Validate user_id FK — the request may carry an arbitrary string (e.g. from
+    # the simulator form). Only persist it if the user actually exists.
+    resolved_user_id: Optional[str] = None
+    if request.user_id:
+        user_obj = await session.get(User, request.user_id)
+        if user_obj:
+            resolved_user_id = user_obj.id
+
     access_decision = AccessDecision(
         agent_id=agent.id if agent else None,
-        user_id=request.user_id,
+        user_id=resolved_user_id,
         action_type=request.action,
         resource_type=request.resource_type,
         resource_identifier=request.resource,

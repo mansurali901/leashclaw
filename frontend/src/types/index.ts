@@ -2,8 +2,8 @@ export type UserRole = "super_admin" | "admin" | "auditor" | "viewer";
 export type AgentStatus = "active" | "suspended" | "decommissioned";
 export type Effect = "allow" | "deny";
 export type SubjectType = "agent" | "role" | "team" | "user";
-export type ActionType = "read" | "write" | "execute" | "share" | "call_api" | "access_url" | "delete";
-export type ResourceType = "filesystem" | "api" | "url" | "database" | "secret" | "tool";
+export type ActionType = "read" | "write" | "create" | "delete" | "list" | "move" | "rename" | "append" | "execute" | "share" | "call_api" | "access_url" | "invoke";
+export type ResourceType = "filesystem" | "api" | "url" | "database" | "secret" | "tool" | "command";
 export type ViolationSeverity = "low" | "medium" | "high" | "critical";
 
 export interface UserRead {
@@ -157,6 +157,13 @@ export interface AuditLogRead {
   payload: Record<string, unknown>;
   ip_address: string | null;
   created_at: string;
+}
+
+export interface EngineSettingsRead {
+  default_effect: "allow" | "deny";
+  policy_engine_backend: string;
+  default_rate_limit_per_minute: number;
+  opa_url: string | null;
 }
 
 export interface EvaluationRequest {

@@ -8,8 +8,8 @@ import { EffectBadge } from "@/components/Badges";
 import { useAuth } from "@/lib/auth";
 import type { ActionType, Effect, PolicyRead, ResourceType, RuleRead, SubjectType } from "@/types";
 
-const ACTIONS: ActionType[] = ["read", "write", "execute", "share", "call_api", "access_url", "delete"];
-const RESOURCE_TYPES: ResourceType[] = ["filesystem", "api", "url", "database", "secret", "tool"];
+const ACTIONS: ActionType[] = ["read", "write", "create", "delete", "list", "move", "rename", "append", "execute", "share", "call_api", "access_url", "invoke"];
+const RESOURCE_TYPES: ResourceType[] = ["filesystem", "api", "url", "database", "secret", "tool", "command"];
 const SUBJECT_TYPES: SubjectType[] = ["agent", "role", "team", "user"];
 
 export default function PolicyDetailPage() {

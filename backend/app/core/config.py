@@ -41,16 +41,7 @@ class Settings(BaseSettings):
     SERVICE_API_KEY_HEADER: str = Field(default="X-Agent-Api-Key")
 
     # --- CORS ---
-    # Stored as a raw string, not List[str]: pydantic-settings tries to
-    # JSON-decode env values for List[str] fields *before* any field
-    # validator runs, which crashes on a plain comma-separated value like
-    # "http://localhost:3000" (it's not valid JSON). Keeping this as `str`
-    # sidesteps that entirely; use `cors_origins` below to get the list.
-    CORS_ORIGINS: str = Field(default="http://localhost:3000")
-
-    @property
-    def cors_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+    CORS_ORIGINS: List[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
     # --- Rate limiting defaults ---
     DEFAULT_RATE_LIMIT_PER_MINUTE: int = Field(default=60)
@@ -60,6 +51,12 @@ class Settings(BaseSettings):
     POLICY_ENGINE_BACKEND: str = Field(default="internal", description="'internal' or 'opa'")
     OPA_URL: str | None = Field(default=None, description="Only used when POLICY_ENGINE_BACKEND=opa")
 
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def _split_origins(cls, v):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     @field_validator("POLICY_DEFAULT_EFFECT")
     @classmethod
