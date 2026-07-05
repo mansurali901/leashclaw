@@ -1,10 +1,11 @@
+import { useId } from "react";
 import { SVGProps } from "react";
 
-/**
- * Three claw marks fanning outward from a shared base — outer claws coral (deny),
- * centre emerald (allow). All strokes converge at the bottom like extended claws.
- */
-export function ClawMark({ className, ...props }: SVGProps<SVGSVGElement>) {
+export function ShieldMark({ className, ...props }: SVGProps<SVGSVGElement>) {
+  const uid = useId().replace(/:/g, "");
+  const gShield = `lcg-s-${uid}`;
+  const gHighlight = `lcg-h-${uid}`;
+
   return (
     <svg
       viewBox="0 0 48 48"
@@ -14,92 +15,134 @@ export function ClawMark({ className, ...props }: SVGProps<SVGSVGElement>) {
       className={className}
       {...props}
     >
-      {/* Left claw — fans upper-left */}
+      <defs>
+        <linearGradient id={gShield} x1="24" y1="2" x2="24" y2="46" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#2563EB" />
+          <stop offset="55%" stopColor="#1E40AF" />
+          <stop offset="100%" stopColor="#1E3A8A" />
+        </linearGradient>
+        <radialGradient id={gHighlight} cx="35%" cy="25%" r="60%" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#60A5FA" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#60A5FA" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Shield body */}
       <path
-        d="M 24 44 C 20 32 10 18 6 5"
-        stroke="#FF5C6C"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeOpacity="0.9"
+        d="M24 2 L6 8 L4.5 28.5 Q4.5 40.5 24 46.5 Q43.5 40.5 43.5 28.5 L42 8 Z"
+        fill={`url(#${gShield})`}
       />
-      {/* Centre claw — goes straight up */}
+      {/* Highlight sheen */}
       <path
-        d="M 24 44 C 24 30 23 17 24 5"
-        stroke="#3DDC97"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeOpacity="0.85"
+        d="M24 2 L6 8 L4.5 28.5 Q4.5 40.5 24 46.5 Q43.5 40.5 43.5 28.5 L42 8 Z"
+        fill={`url(#${gHighlight})`}
       />
-      {/* Right claw — fans upper-right */}
+      {/* Shield border */}
       <path
-        d="M 24 44 C 28 32 38 18 42 5"
-        stroke="#FF5C6C"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeOpacity="0.9"
+        d="M24 2 L6 8 L4.5 28.5 Q4.5 40.5 24 46.5 Q43.5 40.5 43.5 28.5 L42 8 Z"
+        fill="none"
+        stroke="#60A5FA"
+        strokeWidth="0.9"
+        strokeOpacity="0.6"
       />
+
+      {/* ── Network lines: Y-shape from AI node down to the two person nodes ── */}
+      <line x1="24" y1="20.5" x2="24" y2="26.5" stroke="white" strokeWidth="1.3" strokeOpacity="0.5" />
+      <line x1="24" y1="26.5" x2="13.5" y2="33.5" stroke="white" strokeWidth="1.3" strokeOpacity="0.5" />
+      <line x1="24" y1="26.5" x2="34.5" y2="33.5" stroke="white" strokeWidth="1.3" strokeOpacity="0.5" />
+
+      {/* ── AI / Robot node — top center ── */}
+      <circle cx="24" cy="13.5" r="5.8" fill="#1E3A8A" stroke="#60A5FA" strokeWidth="1.4" />
+      {/* Visor / sensor bar */}
+      <rect x="20.5" y="11.8" width="7" height="3.2" rx="1.6" fill="#60A5FA" />
+      {/* Sensor dots */}
+      <circle cx="22.3" cy="13.4" r="0.9" fill="#DBEAFE" />
+      <circle cx="25.7" cy="13.4" r="0.9" fill="#DBEAFE" />
+      {/* Chin / lower face indicator */}
+      <path d="M21.5 16.2 Q24 17.5 26.5 16.2" fill="none" stroke="#60A5FA" strokeWidth="0.8" strokeLinecap="round" strokeOpacity="0.7" />
+
+      {/* ── Left person node ── */}
+      <circle cx="13.5" cy="34" r="3.8" fill="#1E3A8A" stroke="#93C5FD" strokeWidth="1.2" />
+      {/* Person head */}
+      <circle cx="13.5" cy="32.1" r="1.7" fill="#93C5FD" />
+      {/* Person shoulders arc */}
+      <path d="M10.5 35.5 Q13.5 38.2 16.5 35.5" fill="none" stroke="#93C5FD" strokeWidth="1.1" strokeLinecap="round" />
+
+      {/* ── Right person node ── */}
+      <circle cx="34.5" cy="34" r="3.8" fill="#1E3A8A" stroke="#93C5FD" strokeWidth="1.2" />
+      {/* Person head */}
+      <circle cx="34.5" cy="32.1" r="1.7" fill="#93C5FD" />
+      {/* Person shoulders arc */}
+      <path d="M31.5 35.5 Q34.5 38.2 37.5 35.5" fill="none" stroke="#93C5FD" strokeWidth="1.1" strokeLinecap="round" />
     </svg>
   );
 }
 
+// Alias kept for any remaining imports
+export const ClawMark = ShieldMark;
+
 interface LogoProps {
   variant?: "mark" | "horizontal" | "stacked";
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "nav" | "lg";
   className?: string;
 }
 
 const markSize = {
-  xs: "h-4 w-4",
-  sm: "h-5 w-5",
-  md: "h-8 w-8",
-  lg: "h-14 w-14",
+  xs:  "h-4 w-4",
+  sm:  "h-6 w-6",
+  nav: "h-8 w-8",
+  md:  "h-9 w-9",
+  lg:  "h-16 w-16",
 };
 
 const wordSize = {
-  xs: "text-sm",
-  sm: "text-base",
-  md: "text-xl",
-  lg: "text-3xl",
+  xs:  "text-sm",
+  sm:  "text-base",
+  nav: "text-base",
+  md:  "text-xl",
+  lg:  "text-3xl",
 };
 
 const subSize = {
-  xs: "text-[9px]",
-  sm: "text-[10px]",
-  md: "text-xs",
-  lg: "text-sm",
+  xs:  "text-[9px]",
+  sm:  "text-[10px]",
+  nav: "text-[10px]",
+  md:  "text-[11px]",
+  lg:  "text-sm",
 };
 
 export default function Logo({ variant = "horizontal", size = "md", className = "" }: LogoProps) {
   if (variant === "mark") {
-    return <ClawMark className={`${markSize[size]} ${className}`} />;
+    return <ShieldMark className={`${markSize[size]} ${className}`} />;
   }
 
   if (variant === "stacked") {
+    const stackMarkSize = size === "lg" ? "lg" : size === "nav" ? "nav" : "md";
     return (
-      <div className={`flex flex-col items-center gap-2 ${className}`}>
-        <ClawMark className={markSize[size === "lg" ? "lg" : "md"]} />
+      <div className={`flex flex-col items-center gap-3 ${className}`}>
+        <ShieldMark className={markSize[stackMarkSize]} />
         <div className="text-center">
           <p className={`font-display font-bold text-mist-100 tracking-tight leading-none ${wordSize[size]}`}>
             LeashClaw
           </p>
-          <p className={`font-mono text-mist-700 mt-1 tracking-widest uppercase ${subSize[size]}`}>
-            agent governance console
+          <p className={`font-mono text-mist-600 mt-1.5 tracking-widest uppercase ${subSize[size]}`}>
+            Governance Console
           </p>
         </div>
       </div>
     );
   }
 
-  // horizontal — mark beside wordmark
+  // horizontal — shield beside wordmark
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <ClawMark className={markSize[size]} />
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      <ShieldMark className={markSize[size]} />
       <div>
         <p className={`font-display font-bold text-mist-100 tracking-tight leading-none ${wordSize[size]}`}>
           LeashClaw
         </p>
-        <p className={`font-mono text-mist-700 tracking-widest uppercase ${subSize[size]}`}>
-          governance console
+        <p className={`font-mono text-mist-600 tracking-widest uppercase ${subSize[size]}`}>
+          Governance Console
         </p>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import DocsDrawer, { DocSection, DocP, DocCode, DocNote, DocTable } from "@/components/DocsDrawer";
 import { api, ApiError } from "@/lib/api";
 import { StatusBadge } from "@/components/Badges";
 import { useAuth } from "@/lib/auth";
@@ -22,6 +23,7 @@ export default function AgentsPage() {
   const [newCommand, setNewCommand] = useState("");
   const [cmdSaving, setCmdSaving] = useState(false);
   const [cmdError, setCmdError] = useState<string | null>(null);
+  const [showDocs, setShowDocs] = useState(false);
 
   async function refresh() {
     const [a, p] = await Promise.all([api.get<AgentRead[]>("/agents"), api.get<PolicyRead[]>("/policies")]);
@@ -77,7 +79,7 @@ export default function AgentsPage() {
 
   async function addCommand() {
     if (!selectedAgent || !newCommand.trim()) return;
-    const cmd = newCommand.trim().split(/\s+/)[0]; // take only the base command name
+    const cmd = newCommand.trim().split(/\s+/)[0] ?? newCommand.trim();
     if (selectedAgent.allowed_commands.includes(cmd)) {
       setCmdError("Command already in the list");
       return;
@@ -103,14 +105,22 @@ export default function AgentsPage() {
             <h1 className="font-display text-2xl text-mist-100">Agents</h1>
             <p className="text-sm text-mist-500 mt-1">Registered agent identities, sandboxing, and policy assignment.</p>
           </div>
-          {isAdmin && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowCreate(true)}
-              className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
+              onClick={() => setShowDocs(true)}
+              className="rounded-lg border border-ink-600 text-mist-500 text-sm px-4 py-2 hover:text-mist-100 hover:border-ink-500 transition-colors"
             >
-              + Register agent
+              Onboarding guide
             </button>
-          )}
+            {isAdmin && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
+              >
+                + Register agent
+              </button>
+            )}
+          </div>
         </header>
 
         {loading ? (
@@ -314,6 +324,132 @@ export default function AgentsPage() {
           setError={setError}
         />
       )}
+
+      <DocsDrawer open={showDocs} onClose={() => setShowDocs(false)} title="Agent onboarding guide">
+        <DocSection title="Step 1 — Register the agent">
+          <DocP>
+            Click <strong className="text-mist-200">+ Register agent</strong> and fill in the fields:
+          </DocP>
+          <DocTable
+            headers={["Field", "Description"]}
+            rows={[
+              ["Slug", "Stable machine identifier used in policy rules and API calls. e.g. agent_billing_001. Lowercase, numbers, hyphens and underscores only. Cannot be changed after creation."],
+              ["Name", "Human-readable display name shown in the dashboard."],
+              ["Owner team", "Optional team grouping. Team-level policies apply to all agents with this team value."],
+              ["Description", "Optional context about what this agent does."],
+            ]}
+          />
+        </DocSection>
+
+        <DocSection title="Step 2 — Save the API key">
+          <DocP>
+            The raw API key is shown <strong className="text-mist-200">once</strong> at registration time. Copy it immediately — it cannot be retrieved again. Store it in your agent runtime&apos;s secrets manager (e.g. AWS Secrets Manager, Vault, or an environment variable injected at runtime).
+          </DocP>
+          <DocNote>
+            The key format is <code className="font-mono">agk_&lt;random&gt;</code>. If the key is lost, use <strong>Rotate key</strong> to generate a new one — the old key is invalidated immediately.
+          </DocNote>
+        </DocSection>
+
+        <DocSection title="Step 3 — Create and assign a policy">
+          <DocP>
+            Go to <strong className="text-mist-200">Policies → + New policy</strong> (or import from JSON) to create a policy. Add rules for the resources your agent should access. Then return to the Agents page, select the agent, and assign the policy via the <strong className="text-mist-200">Assigned policies</strong> panel on the right.
+          </DocP>
+          <DocNote>
+            An agent with no assigned policy is evaluated against org-wide rules only. If none match, the default effect (deny) applies.
+          </DocNote>
+        </DocSection>
+
+        <DocSection title="Step 4 — Send evaluation requests">
+          <DocP>
+            From your agent runtime, call the enforcement endpoint before every action the agent wants to take:
+          </DocP>
+          <DocCode label="HTTP request">
+            {`POST /api/v1/enforcement/evaluate
+X-Agent-Api-Key: agk_your_key_here
+Content-Type: application/json
+
+{
+  "agent_id": "your-agent-slug",
+  "action": "read",
+  "resource_type": "filesystem",
+  "resource": "/data/report.csv",
+  "metadata": {}
+}`}
+          </DocCode>
+          <DocCode label="Response — allowed">
+            {`{
+  "decision": "allow",
+  "reason": "Matched rule 'allow-reports' -> allow",
+  "matched_rule_id": "...",
+  "access_decision_id": "...",
+  "rate_limited": false,
+  "latency_ms": 4.2
+}`}
+          </DocCode>
+          <DocCode label="Response — denied">
+            {`{
+  "decision": "deny",
+  "reason": "No matching rule — default policy is deny",
+  "matched_rule_id": null,
+  "access_decision_id": "...",
+  "rate_limited": false,
+  "latency_ms": 1.1
+}`}
+          </DocCode>
+          <DocP>
+            If <code className="font-mono text-mist-300">decision</code> is <code className="font-mono text-signal-deny">deny</code>, block the action. If it is <code className="font-mono text-signal-allow">allow</code>, proceed.
+          </DocP>
+        </DocSection>
+
+        <DocSection title="Step 5 — Command restrictions (optional)">
+          <DocP>
+            For agents that execute shell commands, use the <strong className="text-mist-200">Command restrictions</strong> panel to set an explicit allowlist. When set, any <code className="font-mono text-mist-300">exec:&lt;cmd&gt;</code> request not on the list is denied before policy rules are even checked.
+          </DocP>
+          <DocNote>
+            Leave the allowlist empty to apply no restriction at this level — policy rules still apply.
+          </DocNote>
+        </DocSection>
+
+        <DocSection title="Step 6 — Test with the simulator">
+          <DocP>
+            Use the <strong className="text-mist-200">Simulator</strong> page to test your policy rules before deploying your agent. Each simulation is logged and visible in the Audit trail. Use a test agent slug to keep simulation traffic separate.
+          </DocP>
+        </DocSection>
+
+        <DocSection title="OpenClaw integration">
+          <DocP>
+            If your agent runs inside OpenClaw, install the guardrail enforcement plugin. Add this to your <code className="font-mono text-mist-300">~/.openclaw/openclaw.json</code>:
+          </DocP>
+          <DocCode label="openclaw.json">
+            {`{
+  "plugins": {
+    "entries": {
+      "guardrail-enforcement": {
+        "config": {
+          "guardrailUrl": "http://localhost:8000/api/v1",
+          "agentSlug": "your-agent-slug",
+          "agentApiKey": "agk_your_key_here",
+          "failOpenOnNetworkError": false
+        }
+      }
+    }
+  }
+}`}
+          </DocCode>
+          <DocP>
+            With the plugin active, every tool call OpenClaw attempts is evaluated against your policy before execution. A denied tool call is blocked and the agent receives the deny reason.
+          </DocP>
+          <DocNote>
+            Set <code className="font-mono">failOpenOnNetworkError: false</code> (the default) to fail closed — if the guardrail engine is unreachable, the tool call is blocked. Set to <code className="font-mono">true</code> only in development environments.
+          </DocNote>
+        </DocSection>
+
+        <DocSection title="Rotate the API key">
+          <DocP>
+            If a key is compromised or lost, click the agent row to open the detail panel, then use the <strong className="text-mist-200">Rotate key</strong> option (available to admins). The old key is invalidated immediately — update the key in your agent runtime before rotating.
+          </DocP>
+        </DocSection>
+      </DocsDrawer>
     </AppShell>
   );
 }

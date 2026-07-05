@@ -52,8 +52,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex">
       <aside className="w-60 shrink-0 border-r border-ink-600 bg-ink-950/80 flex flex-col h-screen sticky top-0">
-        <div className="px-4 py-4 border-b border-ink-600 flex items-center justify-between gap-2">
-          <Logo variant="horizontal" size="sm" />
+        <div className="px-4 py-5 border-b border-ink-600 flex items-center justify-between gap-2">
+          <Logo variant="horizontal" size="nav" />
           <button
             onClick={toggle}
             aria-label="Toggle theme"
