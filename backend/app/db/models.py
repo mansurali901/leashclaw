@@ -133,6 +133,11 @@ class Agent(SQLModel, table=True):
     api_key_prefix: str = Field(index=True, description="First 12 chars of raw key, for O(1) lookup without exposing the full key")
     tags: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     metadata_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    allowed_commands: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON),
+        description="Allowlist of exec commands the agent may run (e.g. ['ls','git']). Empty = no restriction from this field.",
+    )
     sandbox_profile_id: Optional[str] = Field(default=None, foreign_key="sandbox_profiles.id")
     created_by: Optional[str] = Field(default=None, foreign_key="users.id")
     created_at: datetime = Field(default_factory=utcnow)

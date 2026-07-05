@@ -25,6 +25,7 @@ export interface AgentRead {
   status: AgentStatus;
   tags: string[];
   metadata_json: Record<string, unknown>;
+  allowed_commands: string[];
   sandbox_profile_id: string | null;
   created_at: string;
   updated_at: string;

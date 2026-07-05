@@ -24,6 +24,7 @@ class AgentUpdate(BaseModel):
     tags: Optional[list[str]] = None
     metadata_json: Optional[dict] = None
     sandbox_profile_id: Optional[str] = None
+    allowed_commands: Optional[list[str]] = None
 
 
 class AgentRead(BaseModel):
@@ -35,6 +36,7 @@ class AgentRead(BaseModel):
     status: AgentStatus
     tags: list[str]
     metadata_json: dict
+    allowed_commands: list[str]
     sandbox_profile_id: Optional[str]
     created_at: datetime
     updated_at: datetime
