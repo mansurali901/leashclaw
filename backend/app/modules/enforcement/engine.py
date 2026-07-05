@@ -141,6 +141,26 @@ async def evaluate(session: AsyncSession, request: EvaluationRequest) -> EngineR
             latency_ms=latency,
         )
 
+    # Command allowlist: if the agent has a non-empty allowed_commands list and
+    # this is an exec tool call, deny any command not on the list before policy
+    # evaluation even runs.
+    if (
+        agent.allowed_commands
+        and request.action == "execute"
+        and request.resource_type == "tool"
+        and request.resource.startswith("exec:")
+    ):
+        command = request.resource[len("exec:"):]
+        if command not in agent.allowed_commands:
+            latency = (time.perf_counter() - start) * 1000
+            return EngineResult(
+                decision=Effect.DENY,
+                reason=f"Command '{command}' is not in the agent's allowed commands list",
+                matched_rule_id=None,
+                rate_limited=False,
+                latency_ms=latency,
+            )
+
     user: Optional[User] = None
     if request.user_id:
         user = await session.get(User, request.user_id)

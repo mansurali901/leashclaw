@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "openclaw": {
+    "hooks": ["./index.ts"]
+  }
+}

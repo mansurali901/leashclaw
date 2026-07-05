@@ -18,6 +18,11 @@ export default function AgentsPage() {
   const [agentPolicies, setAgentPolicies] = useState<PolicyRead[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Command restrictions state
+  const [newCommand, setNewCommand] = useState("");
+  const [cmdSaving, setCmdSaving] = useState(false);
+  const [cmdError, setCmdError] = useState<string | null>(null);
+
   async function refresh() {
     const [a, p] = await Promise.all([api.get<AgentRead[]>("/agents"), api.get<PolicyRead[]>("/policies")]);
     setAgents(a);
@@ -31,6 +36,8 @@ export default function AgentsPage() {
 
   async function openAgent(agent: AgentRead) {
     setSelectedAgent(agent);
+    setNewCommand("");
+    setCmdError(null);
     const ap = await api.get<PolicyRead[]>(`/agents/${agent.id}/policies`);
     setAgentPolicies(ap);
   }
@@ -51,6 +58,41 @@ export default function AgentsPage() {
     const next = agent.status === "active" ? "suspended" : "active";
     await api.patch(`/agents/${agent.id}`, { status: next });
     refresh();
+  }
+
+  async function updateCommands(commands: string[]) {
+    if (!selectedAgent) return;
+    setCmdSaving(true);
+    setCmdError(null);
+    try {
+      const updated = await api.patch<AgentRead>(`/agents/${selectedAgent.id}`, { allowed_commands: commands });
+      setSelectedAgent(updated);
+      setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    } catch (err) {
+      setCmdError(err instanceof ApiError ? err.message : "Failed to update");
+    } finally {
+      setCmdSaving(false);
+    }
+  }
+
+  async function addCommand() {
+    if (!selectedAgent || !newCommand.trim()) return;
+    const cmd = newCommand.trim().split(/\s+/)[0]; // take only the base command name
+    if (selectedAgent.allowed_commands.includes(cmd)) {
+      setCmdError("Command already in the list");
+      return;
+    }
+    setNewCommand("");
+    await updateCommands([...selectedAgent.allowed_commands, cmd]);
+  }
+
+  async function removeCommand(cmd: string) {
+    if (!selectedAgent) return;
+    await updateCommands(selectedAgent.allowed_commands.filter((c) => c !== cmd));
+  }
+
+  async function clearAllCommands() {
+    await updateCommands([]);
   }
 
   return (
@@ -128,39 +170,116 @@ export default function AgentsPage() {
               </table>
             </div>
 
-            <div className="panel p-5">
+            <div className="panel p-5 space-y-6 overflow-y-auto max-h-[80vh]">
               {!selectedAgent ? (
-                <p className="text-sm text-mist-700">Select an agent to view assigned policies.</p>
+                <p className="text-sm text-mist-700">Select an agent to view details.</p>
               ) : (
                 <>
-                  <h2 className="font-display text-base text-mist-100">{selectedAgent.name}</h2>
-                  <p className="font-mono text-xs text-mist-700 mb-4">{selectedAgent.slug}</p>
-
-                  <p className="text-xs font-mono text-mist-700 uppercase tracking-wide mb-2">Assigned policies</p>
-                  <div className="space-y-2 mb-4">
-                    {agentPolicies.length === 0 && <p className="text-sm text-mist-700">None assigned — default effect applies.</p>}
-                    {agentPolicies.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between rounded-lg bg-ink-800 border border-ink-700 px-3 py-2">
-                        <span className="text-sm text-mist-100">{p.name}</span>
-                        {isAdmin && (
-                          <button onClick={() => unassignPolicy(p.id)} className="text-xs text-signal-deny font-mono">
-                            remove
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                  <div>
+                    <h2 className="font-display text-base text-mist-100">{selectedAgent.name}</h2>
+                    <p className="font-mono text-xs text-mist-700">{selectedAgent.slug}</p>
                   </div>
 
-                  {isAdmin && (
-                    <>
-                      <p className="text-xs font-mono text-mist-700 uppercase tracking-wide mb-2">Assign a policy</p>
+                  {/* ── Command restrictions ── */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-mono text-mist-700 uppercase tracking-wide">Command restrictions</p>
+                      {isAdmin && selectedAgent.allowed_commands.length > 0 && (
+                        <button
+                          onClick={clearAllCommands}
+                          disabled={cmdSaving}
+                          className="text-xs font-mono text-signal-deny hover:text-signal-deny/70 disabled:opacity-40"
+                        >
+                          clear all
+                        </button>
+                      )}
+                    </div>
+
+                    {selectedAgent.allowed_commands.length === 0 ? (
+                      <div className="rounded-lg bg-ink-900 border border-ink-700 px-3 py-2.5 mb-3">
+                        <p className="text-xs text-mist-700">
+                          <span className="font-mono text-signal-allow">unrestricted</span> — all exec commands pass through policy rules
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 mb-3">
+                        {selectedAgent.allowed_commands.map((cmd) => (
+                          <div
+                            key={cmd}
+                            className="flex items-center justify-between rounded-lg bg-ink-900 border border-ink-700 px-3 py-1.5"
+                          >
+                            <span className="font-mono text-sm text-mist-100">{cmd}</span>
+                            {isAdmin && (
+                              <button
+                                onClick={() => removeCommand(cmd)}
+                                disabled={cmdSaving}
+                                className="text-xs font-mono text-signal-deny hover:text-signal-deny/70 disabled:opacity-40"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <p className="text-[11px] font-mono text-mist-700 pt-1">
+                          Commands not on this list are denied before policy evaluation.
+                        </p>
+                      </div>
+                    )}
+
+                    {isAdmin && (
+                      <div className="flex gap-2">
+                        <input
+                          value={newCommand}
+                          onChange={(e) => { setNewCommand(e.target.value); setCmdError(null); }}
+                          onKeyDown={(e) => e.key === "Enter" && addCommand()}
+                          placeholder="e.g. git"
+                          className="flex-1 rounded-lg bg-ink-900 border border-ink-600 px-3 py-1.5 text-sm font-mono text-mist-100 outline-none focus:border-signal-info"
+                        />
+                        <button
+                          onClick={addCommand}
+                          disabled={cmdSaving || !newCommand.trim()}
+                          className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-3 py-1.5 hover:bg-ink-600 disabled:opacity-40"
+                        >
+                          {cmdSaving ? "…" : "Add"}
+                        </button>
+                      </div>
+                    )}
+                    {cmdError && <p className="text-xs font-mono text-signal-deny mt-1.5">{cmdError}</p>}
+                  </div>
+
+                  {/* ── Assigned policies ── */}
+                  <div>
+                    <p className="text-xs font-mono text-mist-700 uppercase tracking-wide mb-2">Assigned policies</p>
+                    <div className="space-y-2 mb-3">
+                      {agentPolicies.length === 0 && (
+                        <p className="text-sm text-mist-700">None assigned — default effect applies.</p>
+                      )}
+                      {agentPolicies.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between rounded-lg bg-ink-800 border border-ink-700 px-3 py-2"
+                        >
+                          <span className="text-sm text-mist-100">{p.name}</span>
+                          {isAdmin && (
+                            <button
+                              onClick={() => unassignPolicy(p.id)}
+                              className="text-xs text-signal-deny font-mono"
+                            >
+                              remove
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {isAdmin && (
                       <select
                         onChange={(e) => e.target.value && assignPolicy(e.target.value)}
-                        defaultValue=""
+                        value=""
                         className="w-full rounded-lg bg-ink-900 border border-ink-600 px-3 py-2 text-sm text-mist-100 outline-none"
                       >
                         <option value="" disabled>
-                          Choose policy…
+                          Assign a policy…
                         </option>
                         {policies
                           .filter((p) => !agentPolicies.find((ap) => ap.id === p.id))
@@ -170,8 +289,8 @@ export default function AgentsPage() {
                             </option>
                           ))}
                       </select>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </>
               )}
             </div>
