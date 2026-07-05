@@ -83,29 +83,32 @@ export const ClawMark = ShieldMark;
 
 interface LogoProps {
   variant?: "mark" | "horizontal" | "stacked";
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "nav" | "lg";
   className?: string;
 }
 
 const markSize = {
-  xs: "h-4 w-4",
-  sm: "h-6 w-6",
-  md: "h-9 w-9",
-  lg: "h-16 w-16",
+  xs:  "h-4 w-4",
+  sm:  "h-6 w-6",
+  nav: "h-8 w-8",
+  md:  "h-9 w-9",
+  lg:  "h-16 w-16",
 };
 
 const wordSize = {
-  xs: "text-sm",
-  sm: "text-base",
-  md: "text-xl",
-  lg: "text-3xl",
+  xs:  "text-sm",
+  sm:  "text-base",
+  nav: "text-base",
+  md:  "text-xl",
+  lg:  "text-3xl",
 };
 
 const subSize = {
-  xs: "text-[9px]",
-  sm: "text-[10px]",
-  md: "text-[11px]",
-  lg: "text-sm",
+  xs:  "text-[9px]",
+  sm:  "text-[10px]",
+  nav: "text-[10px]",
+  md:  "text-[11px]",
+  lg:  "text-sm",
 };
 
 export default function Logo({ variant = "horizontal", size = "md", className = "" }: LogoProps) {
@@ -114,9 +117,10 @@ export default function Logo({ variant = "horizontal", size = "md", className = 
   }
 
   if (variant === "stacked") {
+    const stackMarkSize = size === "lg" ? "lg" : size === "nav" ? "nav" : "md";
     return (
       <div className={`flex flex-col items-center gap-3 ${className}`}>
-        <ShieldMark className={markSize[size === "lg" ? "lg" : "md"]} />
+        <ShieldMark className={markSize[stackMarkSize]} />
         <div className="text-center">
           <p className={`font-display font-bold text-mist-100 tracking-tight leading-none ${wordSize[size]}`}>
             LeashClaw
