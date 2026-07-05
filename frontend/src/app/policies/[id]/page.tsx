@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import DocsDrawer, { DocSection, DocP, DocCode, DocNote, DocTable } from "@/components/DocsDrawer";
 import { api, ApiError } from "@/lib/api";
 import { EffectBadge } from "@/components/Badges";
 import { useAuth } from "@/lib/auth";
@@ -12,6 +13,115 @@ const ACTIONS: ActionType[] = ["read", "write", "create", "delete", "list", "mov
 const RESOURCE_TYPES: ResourceType[] = ["filesystem", "api", "url", "database", "secret", "tool", "command"];
 const SUBJECT_TYPES: SubjectType[] = ["agent", "role", "team", "user"];
 
+const RULE_EXAMPLES: Record<string, string> = {
+  filesystem: JSON.stringify({
+    name: "deny-pii-reads",
+    description: "Block agents from reading PII files",
+    subject_type: "agent",
+    subject_value: "*",
+    action: "read",
+    resource_type: "filesystem",
+    resource_pattern: "/data/pii/**",
+    condition: { classification: { in: ["pii", "secret"] } },
+    effect: "deny",
+    priority: 1000,
+    enabled: true,
+    alert_on_match: true,
+    rate_limit_per_minute: null,
+  }, null, 2),
+  url: JSON.stringify({
+    name: "deny-external-urls",
+    description: "Block external URL access",
+    subject_type: "agent",
+    subject_value: "*",
+    action: "access_url",
+    resource_type: "url",
+    resource_pattern: "*",
+    condition: {},
+    effect: "deny",
+    priority: 500,
+    enabled: true,
+    alert_on_match: true,
+    rate_limit_per_minute: null,
+  }, null, 2),
+  api: JSON.stringify({
+    name: "rate-limit-payments",
+    description: "Rate-limit payment API calls",
+    subject_type: "agent",
+    subject_value: "*",
+    action: "call_api",
+    resource_type: "api",
+    resource_pattern: "POST /v1/payments/**",
+    condition: {},
+    effect: "allow",
+    priority: 800,
+    enabled: true,
+    alert_on_match: false,
+    rate_limit_per_minute: 10,
+  }, null, 2),
+  tool: JSON.stringify({
+    name: "deny-rm-command",
+    description: "Block execution of the rm command",
+    subject_type: "agent",
+    subject_value: "*",
+    action: "execute",
+    resource_type: "tool",
+    resource_pattern: "exec:rm",
+    condition: {},
+    effect: "deny",
+    priority: 2000,
+    enabled: true,
+    alert_on_match: true,
+    rate_limit_per_minute: null,
+  }, null, 2),
+  secret: JSON.stringify({
+    name: "deny-prod-secret-reads",
+    description: "Block agents from reading production secrets",
+    subject_type: "agent",
+    subject_value: "*",
+    action: "read",
+    resource_type: "secret",
+    resource_pattern: "prod/**",
+    condition: { classification: { eq: "secret" } },
+    effect: "deny",
+    priority: 1500,
+    enabled: true,
+    alert_on_match: true,
+    rate_limit_per_minute: null,
+  }, null, 2),
+  database: JSON.stringify({
+    name: "deny-prod-db-deletes",
+    description: "Block DELETE operations on production databases",
+    subject_type: "agent",
+    subject_value: "*",
+    action: "delete",
+    resource_type: "database",
+    resource_pattern: "postgres://prod/**",
+    condition: {},
+    effect: "deny",
+    priority: 2000,
+    enabled: true,
+    alert_on_match: true,
+    rate_limit_per_minute: null,
+  }, null, 2),
+};
+
+const BLANK_RULE_JSON = JSON.stringify({
+  name: "my-rule",
+  description: "",
+  subject_type: "agent",
+  subject_value: "*",
+  action: "read",
+  resource_type: "filesystem",
+  resource_pattern: "/data/**",
+  condition: {},
+  effect: "deny",
+  priority: 500,
+  enabled: true,
+  alert_on_match: false,
+  rate_limit_per_minute: null,
+}, null, 2);
+
 export default function PolicyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { isAdmin } = useAuth();
@@ -19,6 +129,8 @@ export default function PolicyDetailPage() {
   const [rules, setRules] = useState<RuleRead[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [ruleMode, setRuleMode] = useState<"form" | "json">("form");
+  const [showDocs, setShowDocs] = useState(false);
 
   async function refresh() {
     const [p, r] = await Promise.all([
@@ -57,24 +169,67 @@ export default function PolicyDetailPage() {
                 <h1 className="font-display text-2xl text-mist-100">{policy.name}</h1>
                 <p className="text-sm text-mist-500 mt-1">{policy.description ?? "No description"}</p>
               </div>
-              {isAdmin && (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowForm((s) => !s)}
-                  className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
+                  onClick={() => setShowDocs(true)}
+                  className="rounded-lg border border-ink-600 text-mist-500 text-sm px-4 py-2 hover:text-mist-100 hover:border-ink-500 transition-colors"
                 >
-                  + Add rule
+                  Docs
                 </button>
-              )}
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowForm((s) => !s)}
+                    className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
+                  >
+                    + Add rule
+                  </button>
+                )}
+              </div>
             </header>
 
             {showForm && (
-              <RuleForm
-                policyId={policy.id}
-                onCreated={() => {
-                  setShowForm(false);
-                  refresh();
-                }}
-              />
+              <div className="mb-6">
+                <div className="flex items-center gap-1 mb-3">
+                  <button
+                    onClick={() => setRuleMode("form")}
+                    className={`text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors ${
+                      ruleMode === "form"
+                        ? "bg-ink-700 border-ink-500 text-mist-100"
+                        : "border-ink-700 text-mist-600 hover:text-mist-300"
+                    }`}
+                  >
+                    Form
+                  </button>
+                  <button
+                    onClick={() => setRuleMode("json")}
+                    className={`text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors ${
+                      ruleMode === "json"
+                        ? "bg-ink-700 border-ink-500 text-mist-100"
+                        : "border-ink-700 text-mist-600 hover:text-mist-300"
+                    }`}
+                  >
+                    JSON import
+                  </button>
+                  <span className="text-xs text-mist-700 ml-2">— click Docs for examples</span>
+                </div>
+                {ruleMode === "form" ? (
+                  <RuleForm
+                    policyId={policy.id}
+                    onCreated={() => {
+                      setShowForm(false);
+                      refresh();
+                    }}
+                  />
+                ) : (
+                  <JsonRuleForm
+                    policyId={policy.id}
+                    onCreated={() => {
+                      setShowForm(false);
+                      refresh();
+                    }}
+                  />
+                )}
+              </div>
             )}
 
             <div className="space-y-3 mt-4">
@@ -124,7 +279,219 @@ export default function PolicyDetailPage() {
           </>
         )}
       </div>
+
+      <DocsDrawer open={showDocs} onClose={() => setShowDocs(false)} title="Rule documentation">
+        <DocSection title="How rules work">
+          <DocP>
+            Rules are the atomic units of the policy engine. Each rule matches on a <strong className="text-mist-200">subject</strong> (who), an <strong className="text-mist-200">action</strong> (what operation), a <strong className="text-mist-200">resource type + pattern</strong> (what resource), and an optional <strong className="text-mist-200">condition</strong> (metadata filter). The first matching rule&apos;s <code className="font-mono text-mist-300">effect</code> wins.
+          </DocP>
+          <DocNote>
+            Rules are evaluated highest <code className="font-mono">priority</code> first. Use priority 2000+ for hard security blocks, 500–999 for business logic, 100 for defaults.
+          </DocNote>
+        </DocSection>
+
+        <DocSection title="Rule fields reference">
+          <DocTable
+            headers={["Field", "Type", "Description"]}
+            rows={[
+              ["name", "string", "Unique display name"],
+              ["description", "string?", "Shown as the deny reason in access decisions"],
+              ["subject_type", "agent|role|team|user", "What kind of subject this rule targets"],
+              ["subject_value", "string", "Slug / role name / team / user id, or * for all"],
+              ["action", "ActionType", "The operation being performed (see table below)"],
+              ["resource_type", "ResourceType", "Category of resource (filesystem, url, secret…)"],
+              ["resource_pattern", "string", "Glob or re: pattern matched against the resource"],
+              ["condition", "object", "JSON DSL filter on request metadata (optional)"],
+              ["effect", "allow|deny", "Decision when this rule matches"],
+              ["priority", "number", "Evaluation order — higher is evaluated first"],
+              ["enabled", "boolean", "Disabled rules are skipped entirely"],
+              ["alert_on_match", "boolean", "Raise a violation even on allow (for auditing)"],
+              ["rate_limit_per_minute", "number?", "Cap requests per minute; excess = deny"],
+            ]}
+          />
+        </DocSection>
+
+        <DocSection title="Actions by resource type">
+          <DocTable
+            headers={["Resource type", "Relevant actions"]}
+            rows={[
+              ["filesystem", "read, write, create, delete, list, append, move, rename"],
+              ["url", "access_url"],
+              ["api", "call_api"],
+              ["tool", "execute, invoke"],
+              ["command", "execute"],
+              ["secret", "read, write"],
+              ["database", "read, write, create, delete"],
+            ]}
+          />
+        </DocSection>
+
+        <DocSection title="Resource pattern syntax">
+          <DocTable
+            headers={["Pattern", "Matches"]}
+            rows={[
+              ["*", "Any single segment (no slashes)"],
+              ["**", "Any path at any depth"],
+              ["/data/*.csv", "CSV files directly under /data"],
+              ["/data/**", "All files under /data recursively"],
+              ["exec:rm", "Exact tool name (tool resource type)"],
+              ["re:^prod-.*", "Regex match (prefix with re:)"],
+            ]}
+          />
+        </DocSection>
+
+        <DocSection title="Condition DSL">
+          <DocCode label="All conditions must match (AND logic)">
+            {`{
+  "classification": { "in": ["pii", "secret"] },
+  "location": { "eq": "production" }
+}`}
+          </DocCode>
+          <DocTable
+            headers={["Operator", "Example value"]}
+            rows={[
+              ["eq", '{"eq": "production"}'],
+              ["in", '{"in": ["pii","secret","confidential"]}'],
+              ["not_in", '{"not_in": ["development"]}'],
+              ["regex", '{"regex": "^prod-.*"}'],
+            ]}
+          />
+        </DocSection>
+
+        <DocSection title="JSON import examples">
+          <DocP>
+            Switch to <strong className="text-mist-200">JSON import</strong> mode above and paste any of these templates. Adjust the values and click Import rule.
+          </DocP>
+        </DocSection>
+
+        <DocSection title="Filesystem rule">
+          <DocCode label="Deny PII reads">
+            {RULE_EXAMPLES.filesystem}
+          </DocCode>
+        </DocSection>
+
+        <DocSection title="URL rule">
+          <DocCode label="Deny external URL access">
+            {RULE_EXAMPLES.url}
+          </DocCode>
+        </DocSection>
+
+        <DocSection title="API rule">
+          <DocCode label="Rate-limit API calls (10/min)">
+            {RULE_EXAMPLES.api}
+          </DocCode>
+        </DocSection>
+
+        <DocSection title="Tool / exec rule">
+          <DocCode label="Deny the rm command">
+            {RULE_EXAMPLES.tool}
+          </DocCode>
+          <DocNote>
+            Resource pattern for tool rules uses the prefix <code className="font-mono">exec:</code> followed by the command name. Use <code className="font-mono">exec:*</code> to match all commands.
+          </DocNote>
+        </DocSection>
+
+        <DocSection title="Secret rule">
+          <DocCode label="Deny reading production secrets">
+            {RULE_EXAMPLES.secret}
+          </DocCode>
+        </DocSection>
+
+        <DocSection title="Database rule">
+          <DocCode label="Deny DELETE on production databases">
+            {RULE_EXAMPLES.database}
+          </DocCode>
+        </DocSection>
+      </DocsDrawer>
     </AppShell>
+  );
+}
+
+function JsonRuleForm({ policyId, onCreated }: { policyId: string; onCreated: () => void }) {
+  const [json, setJson] = useState(BLANK_RULE_JSON);
+  const [selected, setSelected] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  function loadExample(type: string) {
+    if (RULE_EXAMPLES[type]) {
+      setJson(RULE_EXAMPLES[type]);
+      setSelected(type);
+      setError(null);
+    }
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      setError("Invalid JSON — check syntax and try again.");
+      return;
+    }
+    if (!parsed.name) {
+      setError('Rule JSON must have a "name" field.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.post("/rules", { ...parsed, policy_id: policyId });
+      onCreated();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to import rule");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="panel p-5 space-y-4">
+      <div>
+        <p className="text-xs text-mist-600 mb-2">Load a template:</p>
+        <div className="flex flex-wrap gap-1.5">
+          {Object.keys(RULE_EXAMPLES).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => loadExample(type)}
+              className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors ${
+                selected === type
+                  ? "bg-ink-700 border-ink-500 text-mist-100"
+                  : "border-ink-700 text-mist-600 hover:text-mist-300 hover:border-ink-600"
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-xs text-mist-600 mb-1.5">
+          Rule JSON — <code className="font-mono">policy_id</code> is added automatically.
+        </p>
+        <textarea
+          value={json}
+          onChange={(e) => { setJson(e.target.value); setError(null); }}
+          rows={22}
+          spellCheck={false}
+          className="w-full rounded-lg bg-ink-950 border border-ink-600 px-3 py-2.5 text-xs font-mono text-mist-100 outline-none focus:border-signal-info"
+        />
+      </div>
+      {error && (
+        <div className="rounded-lg border border-signal-deny/30 bg-signal-deny/10 px-3 py-2 text-sm text-signal-deny">
+          {error}
+        </div>
+      )}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 disabled:opacity-50"
+      >
+        {submitting ? "Importing…" : "Import rule"}
+      </button>
+    </form>
   );
 }
 
