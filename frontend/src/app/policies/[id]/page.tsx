@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import DocsDrawer, { DocSection, DocP, DocCode, DocNote, DocTable } from "@/components/DocsDrawer";
 import { api, ApiError } from "@/lib/api";
 import { EffectBadge } from "@/components/Badges";
@@ -132,6 +133,8 @@ export default function PolicyDetailPage() {
   const [showForm, setShowForm] = useState(false);
   const [ruleMode, setRuleMode] = useState<"form" | "json">("form");
   const [showDocs, setShowDocs] = useState(false);
+  const [confirmDeletePolicy, setConfirmDeletePolicy] = useState(false);
+  const [ruleToDelete, setRuleToDelete] = useState<RuleRead | null>(null);
 
   async function refresh() {
     const [p, r] = await Promise.all([
@@ -153,14 +156,17 @@ export default function PolicyDetailPage() {
   }
 
   async function deleteRule(rule: RuleRead) {
-    if (!confirm(`Delete rule "${rule.name}"?`)) return;
-    await api.del(`/rules/${rule.id}`);
+    setRuleToDelete(rule);
+  }
+
+  async function confirmDeleteRule() {
+    if (!ruleToDelete) return;
+    await api.del(`/rules/${ruleToDelete.id}`);
+    setRuleToDelete(null);
     refresh();
   }
 
   async function deletePolicy() {
-    if (!policy) return;
-    if (!confirm(`Delete policy "${policy.name}" and all its rules? This cannot be undone.`)) return;
     await api.del(`/policies/${id}`);
     router.push("/policies");
   }
@@ -203,7 +209,7 @@ export default function PolicyDetailPage() {
                       {policy.enabled ? "Disable" : "Enable"}
                     </button>
                     <button
-                      onClick={deletePolicy}
+                      onClick={() => setConfirmDeletePolicy(true)}
                       className="rounded-lg border border-signal-deny/40 text-signal-deny text-sm px-4 py-2 hover:border-signal-deny hover:bg-signal-deny/10 transition-colors"
                     >
                       Delete policy
@@ -435,6 +441,26 @@ export default function PolicyDetailPage() {
           </DocCode>
         </DocSection>
       </DocsDrawer>
+
+      <ConfirmDialog
+        open={confirmDeletePolicy}
+        title="Delete policy"
+        message={`Delete "${policy?.name}" and all its rules? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => { setConfirmDeletePolicy(false); deletePolicy(); }}
+        onCancel={() => setConfirmDeletePolicy(false)}
+      />
+
+      <ConfirmDialog
+        open={!!ruleToDelete}
+        title="Delete rule"
+        message={`Delete rule "${ruleToDelete?.name}"?`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeleteRule}
+        onCancel={() => setRuleToDelete(null)}
+      />
     </AppShell>
   );
 }

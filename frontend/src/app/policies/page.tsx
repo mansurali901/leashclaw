@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import DocsDrawer, { DocSection, DocP, DocCode, DocNote, DocTable } from "@/components/DocsDrawer";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -63,6 +64,7 @@ export default function PoliciesPage() {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [policyToDelete, setPolicyToDelete] = useState<PolicyRead | null>(null);
 
   async function refresh() {
     setPolicies(await api.get<PolicyRead[]>("/policies"));
@@ -71,8 +73,13 @@ export default function PoliciesPage() {
 
   async function deletePolicy(p: PolicyRead, e: React.MouseEvent) {
     e.preventDefault();
-    if (!confirm(`Delete policy "${p.name}" and all its rules? This cannot be undone.`)) return;
-    await api.del(`/policies/${p.id}`);
+    setPolicyToDelete(p);
+  }
+
+  async function confirmDeletePolicy() {
+    if (!policyToDelete) return;
+    await api.del(`/policies/${policyToDelete.id}`);
+    setPolicyToDelete(null);
     refresh();
   }
 
@@ -564,6 +571,16 @@ export default function PoliciesPage() {
           </DocCode>
         </DocSection>
       </DocsDrawer>
+
+      <ConfirmDialog
+        open={!!policyToDelete}
+        title="Delete policy"
+        message={`Delete "${policyToDelete?.name}" and all its rules? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeletePolicy}
+        onCancel={() => setPolicyToDelete(null)}
+      />
     </AppShell>
   );
 }
