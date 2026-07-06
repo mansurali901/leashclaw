@@ -1,8 +1,9 @@
 from fastapi import HTTPException, status
+from sqlalchemy import update as sa_update, delete as sa_delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from app.db.models import Policy, Rule
+from app.db.models import AccessDecision, Policy, Rule, Violation
 from app.modules.audit_logs.service import write_audit_log
 from app.modules.rules.schemas import RuleCreate, RuleUpdate
 
@@ -59,8 +60,25 @@ async def update_rule(session: AsyncSession, rule_id: str, payload: RuleUpdate, 
 
 
 async def delete_rule(session: AsyncSession, rule_id: str, actor_id: str) -> None:
-    rule = await get_rule(session, rule_id)
-    await session.delete(rule)
+    # Verify the rule exists; raises 404 if not.
+    await get_rule(session, rule_id)
+
+    # Nullify FK references in audit rows before deleting.
+    # Audit history is preserved; only the FK pointer is cleared.
+    await session.execute(
+        sa_update(AccessDecision)
+        .where(AccessDecision.matched_rule_id == rule_id)
+        .values(matched_rule_id=None)
+    )
+    await session.execute(
+        sa_update(Violation)
+        .where(Violation.rule_id == rule_id)
+        .values(rule_id=None)
+    )
+
+    # Use Core-level delete to bypass ORM cascade handling (which would try
+    # to NULL out rule.policy_id via the back-reference, hitting NOT NULL).
+    await session.execute(sa_delete(Rule).where(Rule.id == rule_id))
     await session.commit()
 
     await write_audit_log(

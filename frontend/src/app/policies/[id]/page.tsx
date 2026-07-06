@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import DocsDrawer, { DocSection, DocP, DocCode, DocNote, DocTable } from "@/components/DocsDrawer";
 import { api, ApiError } from "@/lib/api";
 import { EffectBadge } from "@/components/Badges";
@@ -124,6 +125,7 @@ const BLANK_RULE_JSON = JSON.stringify({
 
 export default function PolicyDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { isAdmin } = useAuth();
   const [policy, setPolicy] = useState<PolicyRead | null>(null);
   const [rules, setRules] = useState<RuleRead[]>([]);
@@ -131,6 +133,14 @@ export default function PolicyDetailPage() {
   const [showForm, setShowForm] = useState(false);
   const [ruleMode, setRuleMode] = useState<"form" | "json">("form");
   const [showDocs, setShowDocs] = useState(false);
+  const [confirmDeletePolicy, setConfirmDeletePolicy] = useState(false);
+  const [ruleToDelete, setRuleToDelete] = useState<RuleRead | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editingRule, setEditingRule] = useState<RuleRead | null>(null);
+  const [ruleEditSaving, setRuleEditSaving] = useState(false);
 
   async function refresh() {
     const [p, r] = await Promise.all([
@@ -152,8 +162,73 @@ export default function PolicyDetailPage() {
   }
 
   async function deleteRule(rule: RuleRead) {
-    if (!confirm(`Delete rule "${rule.name}"?`)) return;
-    await api.del(`/rules/${rule.id}`);
+    setRuleToDelete(rule);
+  }
+
+  async function confirmDeleteRule() {
+    if (!ruleToDelete) return;
+    await api.del(`/rules/${ruleToDelete.id}`);
+    setRuleToDelete(null);
+    refresh();
+  }
+
+  async function deletePolicy() {
+    await api.del(`/policies/${id}`);
+    router.push("/policies");
+  }
+
+  async function togglePolicy() {
+    if (!policy) return;
+    const updated = await api.patch<PolicyRead>(`/policies/${id}`, { enabled: !policy.enabled });
+    setPolicy(updated);
+  }
+
+  function openEdit() {
+    if (!policy) return;
+    setEditName(policy.name);
+    setEditDescription(policy.description ?? "");
+    setShowEdit(true);
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setEditSaving(true);
+    const updated = await api.patch<PolicyRead>(`/policies/${id}`, {
+      name: editName.trim(),
+      description: editDescription.trim() || null,
+    });
+    setPolicy(updated);
+    setShowEdit(false);
+    setEditSaving(false);
+  }
+
+  async function saveRuleEdit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editingRule) return;
+    setRuleEditSaving(true);
+    const fd = new FormData(e.currentTarget);
+    const patch: Record<string, unknown> = {
+      name: (fd.get("name") as string).trim(),
+      description: (fd.get("description") as string).trim() || null,
+      subject_type: fd.get("subject_type"),
+      subject_value: (fd.get("subject_value") as string).trim(),
+      action: fd.get("action"),
+      resource_type: fd.get("resource_type"),
+      resource_pattern: (fd.get("resource_pattern") as string).trim(),
+      effect: fd.get("effect"),
+      priority: Number(fd.get("priority")),
+      alert_on_match: fd.get("alert_on_match") === "true",
+      rate_limit_per_minute: fd.get("rate_limit_per_minute")
+        ? Number(fd.get("rate_limit_per_minute"))
+        : null,
+      condition: (() => {
+        try { return JSON.parse((fd.get("condition") as string) || "{}"); }
+        catch { return editingRule.condition; }
+      })(),
+    };
+    await api.patch(`/rules/${editingRule.id}`, patch);
+    setEditingRule(null);
+    setRuleEditSaving(false);
     refresh();
   }
 
@@ -177,15 +252,81 @@ export default function PolicyDetailPage() {
                   Docs
                 </button>
                 {isAdmin && (
-                  <button
-                    onClick={() => setShowForm((s) => !s)}
-                    className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
-                  >
-                    + Add rule
-                  </button>
+                  <>
+                    <button
+                      onClick={togglePolicy}
+                      className={`rounded-lg border text-sm px-4 py-2 transition-colors ${
+                        policy.enabled
+                          ? "border-ink-600 text-mist-500 hover:text-mist-100 hover:border-ink-500"
+                          : "border-signal-allow/40 text-signal-allow hover:border-signal-allow"
+                      }`}
+                    >
+                      {policy.enabled ? "Disable" : "Enable"}
+                    </button>
+                    <button
+                      onClick={openEdit}
+                      className="rounded-lg border border-ink-600 text-mist-500 text-sm px-4 py-2 hover:text-mist-100 hover:border-ink-500 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeletePolicy(true)}
+                      className="rounded-lg border border-signal-deny/40 text-signal-deny text-sm px-4 py-2 hover:border-signal-deny hover:bg-signal-deny/10 transition-colors"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setShowForm((s) => !s)}
+                      className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
+                    >
+                      + Add rule
+                    </button>
+                  </>
                 )}
               </div>
             </header>
+
+            {showEdit && (
+              <form onSubmit={saveEdit} className="mb-6 panel p-5 space-y-4">
+                <p className="text-sm font-mono text-mist-500">Edit policy</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-mist-600 font-mono">Name</label>
+                    <input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                      className="w-full bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-mist-600 font-mono">Description</label>
+                    <input
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Optional"
+                      className="w-full bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEdit(false)}
+                    className="px-4 py-2 text-sm rounded-lg border border-ink-600 text-mist-500 hover:text-mist-100 hover:border-ink-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editSaving || !editName.trim()}
+                    className="px-4 py-2 text-sm rounded-lg bg-ink-700 border border-ink-500 text-mist-100 hover:bg-ink-600 transition-colors disabled:opacity-50"
+                  >
+                    {editSaving ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </form>
+            )}
 
             {showForm && (
               <div className="mb-6">
@@ -266,12 +407,93 @@ export default function PolicyDetailPage() {
                           <button onClick={() => toggleRule(rule)} className="text-mist-500 hover:text-mist-100">
                             {rule.enabled ? "disable" : "enable"}
                           </button>
+                          <button
+                            onClick={() => setEditingRule(editingRule?.id === rule.id ? null : rule)}
+                            className="text-mist-500 hover:text-mist-100"
+                          >
+                            {editingRule?.id === rule.id ? "cancel" : "edit"}
+                          </button>
                           <button onClick={() => deleteRule(rule)} className="text-signal-deny">
                             delete
                           </button>
                         </div>
                       )}
                     </div>
+
+                    {editingRule?.id === rule.id && (
+                      <form onSubmit={saveRuleEdit} className="mt-4 pt-4 border-t border-ink-700 space-y-3">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Name</label>
+                            <input name="name" defaultValue={rule.name} required className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full" />
+                          </div>
+                          <div className="space-y-1 col-span-2 sm:col-span-2">
+                            <label className="text-xs text-mist-600 font-mono">Description</label>
+                            <input name="description" defaultValue={rule.description ?? ""} placeholder="Optional" className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Subject type</label>
+                            <select name="subject_type" defaultValue={rule.subject_type} className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full">
+                              {SUBJECT_TYPES.map((s) => <option key={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Subject value</label>
+                            <input name="subject_value" defaultValue={rule.subject_value} required className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Action</label>
+                            <select name="action" defaultValue={rule.action} className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full">
+                              {ACTIONS.map((a) => <option key={a}>{a}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Resource type</label>
+                            <select name="resource_type" defaultValue={rule.resource_type} className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full">
+                              {RESOURCE_TYPES.map((r) => <option key={r}>{r}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-1 col-span-2">
+                            <label className="text-xs text-mist-600 font-mono">Resource pattern</label>
+                            <input name="resource_pattern" defaultValue={rule.resource_pattern} required className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Effect</label>
+                            <select name="effect" defaultValue={rule.effect} className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full">
+                              <option value="allow">allow</option>
+                              <option value="deny">deny</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Priority (0–10000)</label>
+                            <input name="priority" type="number" min={0} max={10000} defaultValue={rule.priority} required className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Alert on match</label>
+                            <select name="alert_on_match" defaultValue={String(rule.alert_on_match)} className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full">
+                              <option value="false">No</option>
+                              <option value="true">Yes</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-mist-600 font-mono">Rate limit / min</label>
+                            <input name="rate_limit_per_minute" type="number" min={1} defaultValue={rule.rate_limit_per_minute ?? ""} placeholder="None" className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full" />
+                          </div>
+                          <div className="space-y-1 col-span-2 sm:col-span-3">
+                            <label className="text-xs text-mist-600 font-mono">Condition (JSON)</label>
+                            <input name="condition" defaultValue={JSON.stringify(rule.condition)} placeholder="{}" className="bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400 w-full font-mono text-xs" />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button type="button" onClick={() => setEditingRule(null)} className="px-4 py-2 text-sm rounded-lg border border-ink-600 text-mist-500 hover:text-mist-100 hover:border-ink-500 transition-colors">
+                            Cancel
+                          </button>
+                          <button type="submit" disabled={ruleEditSaving} className="px-4 py-2 text-sm rounded-lg bg-ink-700 border border-ink-500 text-mist-100 hover:bg-ink-600 transition-colors disabled:opacity-50">
+                            {ruleEditSaving ? "Saving…" : "Save changes"}
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 ))}
               {rules.length === 0 && <p className="text-mist-700 text-sm">No rules yet — this policy has no effect until rules are added.</p>}
@@ -403,6 +625,26 @@ export default function PolicyDetailPage() {
           </DocCode>
         </DocSection>
       </DocsDrawer>
+
+      <ConfirmDialog
+        open={confirmDeletePolicy}
+        title="Delete policy"
+        message={`Delete "${policy?.name}" and all its rules? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => { setConfirmDeletePolicy(false); deletePolicy(); }}
+        onCancel={() => setConfirmDeletePolicy(false)}
+      />
+
+      <ConfirmDialog
+        open={!!ruleToDelete}
+        title="Delete rule"
+        message={`Delete rule "${ruleToDelete?.name}"?`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeleteRule}
+        onCancel={() => setRuleToDelete(null)}
+      />
     </AppShell>
   );
 }

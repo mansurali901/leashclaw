@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import DocsDrawer, { DocSection, DocP, DocCode, DocNote, DocTable } from "@/components/DocsDrawer";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -63,10 +64,29 @@ export default function PoliciesPage() {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [policyToDelete, setPolicyToDelete] = useState<PolicyRead | null>(null);
 
   async function refresh() {
     setPolicies(await api.get<PolicyRead[]>("/policies"));
     setLoading(false);
+  }
+
+  async function deletePolicy(p: PolicyRead, e: React.MouseEvent) {
+    e.preventDefault();
+    setPolicyToDelete(p);
+  }
+
+  async function confirmDeletePolicy() {
+    if (!policyToDelete) return;
+    await api.del(`/policies/${policyToDelete.id}`);
+    setPolicyToDelete(null);
+    refresh();
+  }
+
+  async function togglePolicy(p: PolicyRead, e: React.MouseEvent) {
+    e.preventDefault();
+    await api.patch(`/policies/${p.id}`, { enabled: !p.enabled });
+    refresh();
   }
 
   useEffect(() => {
@@ -239,11 +259,33 @@ export default function PoliciesPage() {
                   <p className="text-mist-100">{p.name}</p>
                   <p className="text-sm text-mist-500">{p.description ?? "No description"}</p>
                 </div>
-                <div className="flex items-center gap-3 text-xs font-mono text-mist-700">
-                  <span>v{p.version}</span>
-                  <span className={p.enabled ? "text-signal-allow" : "text-mist-700"}>
-                    {p.enabled ? "enabled" : "disabled"}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-xs font-mono text-mist-700">
+                    <span>v{p.version}</span>
+                    <span className={p.enabled ? "text-signal-allow" : "text-mist-700"}>
+                      {p.enabled ? "enabled" : "disabled"}
+                    </span>
+                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.preventDefault()}>
+                      <button
+                        onClick={(e) => togglePolicy(p, e)}
+                        className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                          p.enabled
+                            ? "border-ink-600 text-mist-600 hover:text-mist-300 hover:border-ink-500"
+                            : "border-signal-allow/40 text-signal-allow hover:border-signal-allow"
+                        }`}
+                      >
+                        {p.enabled ? "Disable" : "Enable"}
+                      </button>
+                      <button
+                        onClick={(e) => deletePolicy(p, e)}
+                        className="text-xs px-2.5 py-1 rounded border border-signal-deny/30 text-signal-deny hover:border-signal-deny hover:bg-signal-deny/10 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Link>
             ))}
@@ -529,6 +571,16 @@ export default function PoliciesPage() {
           </DocCode>
         </DocSection>
       </DocsDrawer>
+
+      <ConfirmDialog
+        open={!!policyToDelete}
+        title="Delete policy"
+        message={`Delete "${policyToDelete?.name}" and all its rules? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeletePolicy}
+        onCancel={() => setPolicyToDelete(null)}
+      />
     </AppShell>
   );
 }

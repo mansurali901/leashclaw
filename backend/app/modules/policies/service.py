@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
@@ -54,8 +55,26 @@ async def update_policy(session: AsyncSession, policy_id: str, payload: PolicyUp
 
 
 async def delete_policy(session: AsyncSession, policy_id: str, actor_id: str) -> None:
-    policy = await get_policy(session, policy_id)
-    await session.delete(policy)
+    # Raw SQL existence check — avoids loading the Policy ORM object into the
+    # identity map, which would trigger SQLAlchemy cascade-nullify on Rule
+    # back-references (rule.policy_id is NOT NULL so that always fails).
+    exists = (await session.execute(
+        text("SELECT 1 FROM policies WHERE id = :pid"), {"pid": policy_id}
+    )).first()
+    if not exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+
+    await session.execute(
+        text("UPDATE access_decisions SET matched_rule_id = NULL WHERE matched_rule_id IN (SELECT id FROM rules WHERE policy_id = :pid)"),
+        {"pid": policy_id},
+    )
+    await session.execute(
+        text("UPDATE violations SET rule_id = NULL WHERE rule_id IN (SELECT id FROM rules WHERE policy_id = :pid)"),
+        {"pid": policy_id},
+    )
+    await session.execute(text("DELETE FROM rules WHERE policy_id = :pid"), {"pid": policy_id})
+    await session.execute(text("DELETE FROM agent_policy_links WHERE policy_id = :pid"), {"pid": policy_id})
+    await session.execute(text("DELETE FROM policies WHERE id = :pid"), {"pid": policy_id})
     await session.commit()
 
     await write_audit_log(
