@@ -135,6 +135,10 @@ export default function PolicyDetailPage() {
   const [showDocs, setShowDocs] = useState(false);
   const [confirmDeletePolicy, setConfirmDeletePolicy] = useState(false);
   const [ruleToDelete, setRuleToDelete] = useState<RuleRead | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   async function refresh() {
     const [p, r] = await Promise.all([
@@ -177,6 +181,25 @@ export default function PolicyDetailPage() {
     setPolicy(updated);
   }
 
+  function openEdit() {
+    if (!policy) return;
+    setEditName(policy.name);
+    setEditDescription(policy.description ?? "");
+    setShowEdit(true);
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setEditSaving(true);
+    const updated = await api.patch<PolicyRead>(`/policies/${id}`, {
+      name: editName.trim(),
+      description: editDescription.trim() || null,
+    });
+    setPolicy(updated);
+    setShowEdit(false);
+    setEditSaving(false);
+  }
+
   return (
     <AppShell>
       <div className="p-8 max-w-[1100px]">
@@ -209,10 +232,16 @@ export default function PolicyDetailPage() {
                       {policy.enabled ? "Disable" : "Enable"}
                     </button>
                     <button
+                      onClick={openEdit}
+                      className="rounded-lg border border-ink-600 text-mist-500 text-sm px-4 py-2 hover:text-mist-100 hover:border-ink-500 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => setConfirmDeletePolicy(true)}
                       className="rounded-lg border border-signal-deny/40 text-signal-deny text-sm px-4 py-2 hover:border-signal-deny hover:bg-signal-deny/10 transition-colors"
                     >
-                      Delete policy
+                      Delete
                     </button>
                     <button
                       onClick={() => setShowForm((s) => !s)}
@@ -224,6 +253,48 @@ export default function PolicyDetailPage() {
                 )}
               </div>
             </header>
+
+            {showEdit && (
+              <form onSubmit={saveEdit} className="mb-6 panel p-5 space-y-4">
+                <p className="text-sm font-mono text-mist-500">Edit policy</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-mist-600 font-mono">Name</label>
+                    <input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                      className="w-full bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-mist-600 font-mono">Description</label>
+                    <input
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Optional"
+                      className="w-full bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm text-mist-100 placeholder-mist-700 focus:outline-none focus:border-ink-400"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEdit(false)}
+                    className="px-4 py-2 text-sm rounded-lg border border-ink-600 text-mist-500 hover:text-mist-100 hover:border-ink-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editSaving || !editName.trim()}
+                    className="px-4 py-2 text-sm rounded-lg bg-ink-700 border border-ink-500 text-mist-100 hover:bg-ink-600 transition-colors disabled:opacity-50"
+                  >
+                    {editSaving ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </form>
+            )}
 
             {showForm && (
               <div className="mb-6">
