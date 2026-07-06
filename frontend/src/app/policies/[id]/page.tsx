@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import DocsDrawer, { DocSection, DocP, DocCode, DocNote, DocTable } from "@/components/DocsDrawer";
 import { api, ApiError } from "@/lib/api";
@@ -124,6 +124,7 @@ const BLANK_RULE_JSON = JSON.stringify({
 
 export default function PolicyDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { isAdmin } = useAuth();
   const [policy, setPolicy] = useState<PolicyRead | null>(null);
   const [rules, setRules] = useState<RuleRead[]>([]);
@@ -157,6 +158,19 @@ export default function PolicyDetailPage() {
     refresh();
   }
 
+  async function deletePolicy() {
+    if (!policy) return;
+    if (!confirm(`Delete policy "${policy.name}" and all its rules? This cannot be undone.`)) return;
+    await api.del(`/policies/${id}`);
+    router.push("/policies");
+  }
+
+  async function togglePolicy() {
+    if (!policy) return;
+    const updated = await api.patch<PolicyRead>(`/policies/${id}`, { enabled: !policy.enabled });
+    setPolicy(updated);
+  }
+
   return (
     <AppShell>
       <div className="p-8 max-w-[1100px]">
@@ -177,12 +191,30 @@ export default function PolicyDetailPage() {
                   Docs
                 </button>
                 {isAdmin && (
-                  <button
-                    onClick={() => setShowForm((s) => !s)}
-                    className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
-                  >
-                    + Add rule
-                  </button>
+                  <>
+                    <button
+                      onClick={togglePolicy}
+                      className={`rounded-lg border text-sm px-4 py-2 transition-colors ${
+                        policy.enabled
+                          ? "border-ink-600 text-mist-500 hover:text-mist-100 hover:border-ink-500"
+                          : "border-signal-allow/40 text-signal-allow hover:border-signal-allow"
+                      }`}
+                    >
+                      {policy.enabled ? "Disable" : "Enable"}
+                    </button>
+                    <button
+                      onClick={deletePolicy}
+                      className="rounded-lg border border-signal-deny/40 text-signal-deny text-sm px-4 py-2 hover:border-signal-deny hover:bg-signal-deny/10 transition-colors"
+                    >
+                      Delete policy
+                    </button>
+                    <button
+                      onClick={() => setShowForm((s) => !s)}
+                      className="rounded-lg bg-ink-700 border border-ink-500 text-mist-100 text-sm px-4 py-2 hover:bg-ink-600 transition-colors"
+                    >
+                      + Add rule
+                    </button>
+                  </>
                 )}
               </div>
             </header>
