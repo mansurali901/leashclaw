@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.db.init_db import init_db
+from app.modules.access_graph.router import router as access_graph_router
 from app.modules.agents.router import router as agents_router
 from app.modules.audit_logs.router import router as audit_router
 from app.modules.auth.router import router as auth_router
@@ -100,3 +101,4 @@ app.include_router(enforcement_router, prefix=api_prefix)
 app.include_router(audit_router, prefix=api_prefix)
 app.include_router(dashboard_router, prefix=api_prefix)
 app.include_router(settings_router, prefix=api_prefix)
+app.include_router(access_graph_router, prefix=api_prefix)

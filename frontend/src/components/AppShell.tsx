@@ -17,16 +17,18 @@ import {
   Settings,
   Sun,
   Moon,
+  Network,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/dashboard", label: "Overview",    Icon: LayoutDashboard },
-  { href: "/agents",    label: "Agents",      Icon: Bot             },
-  { href: "/policies",  label: "Policies",    Icon: Shield          },
-  { href: "/violations",label: "Violations",  Icon: AlertTriangle   },
-  { href: "/audit",     label: "Audit trail", Icon: ScrollText      },
-  { href: "/simulator", label: "Simulator",   Icon: FlaskConical    },
-  { href: "/settings",  label: "Settings",    Icon: Settings        },
+  { href: "/dashboard",     label: "Overview",     Icon: LayoutDashboard },
+  { href: "/agents",        label: "Agents",       Icon: Bot             },
+  { href: "/policies",      label: "Policies",     Icon: Shield          },
+  { href: "/violations",    label: "Violations",   Icon: AlertTriangle   },
+  { href: "/audit",         label: "Audit trail",  Icon: ScrollText      },
+  { href: "/access-graph",  label: "Access Graph", Icon: Network         },
+  { href: "/simulator",     label: "Simulator",    Icon: FlaskConical    },
+  { href: "/settings",      label: "Settings",     Icon: Settings        },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
